@@ -1,9 +1,0 @@
-RoomModel SystemServices {
-	
-	ProtocolClass etSystemProtocol {
-		incoming {
-			Message poll()
-			Message terminate()
-		}
-	}
-}
