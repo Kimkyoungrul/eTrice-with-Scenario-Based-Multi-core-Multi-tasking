@@ -1,0 +1,2286 @@
+/* 
+ * Shortkeys:
+ *	Ctrl+Space	- content assist
+ * 	F3			- open declaration of selected element
+ *	Alt+S 		- open structure diagram
+ *  Alt+B 		- open behavior diagram
+ *  Alt+M 		- open textual editor (in diagrams)
+ */
+RoomModel TemplateModel {
+
+	import room.basic.types.* from "../../org.eclipse.etrice.modellib.c/model/Types.room"
+	import room.basic.service.timing.* from "../../org.eclipse.etrice.modellib.c/model/TimingService.room"
+	import room.basic.types.* from "/home/eselab/eclipse-workspace/org.eclipse.etrice.modellib.c/model/Types.room"
+	import room.basic.service.tcp.* from "/home/eselab/eclipse-workspace/org.eclipse.etrice.modellib.c/model/TcpService.room"
+	LogicalSystem LogSys {
+		SubSystemRef subSystemRef: SubSysClass
+	}
+
+	SubSystemClass SubSysClass {
+		ActorRef topActor: TopActor
+		ActorRef timingService: ATimingService
+
+		LayerConnection ref topActor satisfied_by timingService.timer
+		LogicalThread defaultThread
+		LogicalThread pedalThread
+		LogicalThread throttleThread
+		LogicalThread airflowThread
+		LogicalThread throttleactThread
+		LogicalThread airsysThread
+		LogicalThread fuelingsysThread
+		LogicalThread ignitionsysThread
+		LogicalThread injectactThread
+		LogicalThread igniactThread
+		LogicalThread pedaldiagThread
+		ActorInstanceMapping topActor/AccelPedalSensor -> pedalThread
+		ActorInstanceMapping topActor/ThrottleSensor -> throttleThread
+		ActorInstanceMapping topActor/MassAirFlowSensor -> airflowThread
+		ActorInstanceMapping topActor/CylinerNumObserver -> injectactThread
+		ActorInstanceMapping topActor/ThrottleActuator -> throttleactThread
+		ActorInstanceMapping topActor/AirSystem -> airsysThread
+		ActorInstanceMapping topActor/FuelingSystem -> fuelingsysThread
+		ActorInstanceMapping topActor/IgnitionSystem -> ignitionsysThread
+		ActorInstanceMapping topActor/InjectionActuator -> injectactThread
+		ActorInstanceMapping topActor/IgnitionActuator -> igniactThread
+		ActorInstanceMapping topActor/PadelDiag -> pedaldiagThread
+		ActorInstanceMapping topActor/AirSystem/pedalvoter -> airsysThread
+		ActorInstanceMapping topActor/AirSystem/pedalfeel -> airsysThread
+		ActorInstanceMapping topActor/AirSystem/throttlecontroller -> airsysThread
+		ActorInstanceMapping topActor/FuelingSystem/AirMassFlow -> fuelingsysThread
+		ActorInstanceMapping topActor/FuelingSystem/BassFuelMass -> fuelingsysThread
+		ActorInstanceMapping topActor/FuelingSystem/TransientFurlingCompensation -> fuelingsysThread
+		ActorInstanceMapping topActor/InjectionActuator/TotalFueling -> injectactThread
+		ActorInstanceMapping topActor/InjectionActuator/InjectionTimeActuator -> injectactThread
+		ActorInstanceMapping topActor/IgnitionSystem/AirMassFlow -> ignitionsysThread
+		ActorInstanceMapping topActor/IgnitionSystem/BassFuelMass2 -> ignitionsysThread
+		ActorInstanceMapping topActor/IgnitionActuator/IgnitionTiming -> igniactThread
+		ActorInstanceMapping topActor/IgnitionActuator/IgnitionTimeActuator -> igniactThread
+	}
+
+	// - build your application from here
+	ActorClass TopActor {
+		Structure {
+
+			ActorRef FuelingSystem: FuelingSystem
+			ActorRef AirSystem: AirSystem
+			ActorRef IgnitionSystem: IgnitionSystem
+			ActorRef AccelPedalSensor: AccelPedalSensor
+			ActorRef ThrottleActuator: ThrottleActuator
+			ActorRef InjectionActuator: InjectionActuator
+			ActorRef IgnitionActuator: IgnitionActuator
+			ActorRef ThrottleSensor: ThrottleSensor
+			ActorRef MassAirFlowSensor: MassAirFlowSensor
+			ActorRef CylinerNumObserver: CylinerNumObserver
+			ActorRef PadelDiag: AccelPedalDiagEntity
+			Binding AccelPedalSensor.pedaldata and AirSystem.padalPort
+			Binding ThrottleSensor.throttledata and AirSystem.throttlePort
+
+			Binding AirSystem.throttledata and ThrottleActuator.throttlePort
+			Binding FuelingSystem.injectiondata and InjectionActuator.injectionPort
+			Binding IgnitionSystem.ignitiondata and IgnitionActuator.ignitionPort
+			Binding InjectionActuator.cylinerData and CylinerNumObserver.cylinernum1Port
+			Binding IgnitionActuator.cylinerData and CylinerNumObserver.cylinernum2Port
+			Binding IgnitionSystem.airflowPort and MassAirFlowSensor.airflowdata2
+			Binding FuelingSystem.airflowPort and MassAirFlowSensor.airflowdata
+		}
+		Behavior {
+			StateMachine {
+			}
+		}
+	}
+
+	ActorClass AccelPedalSensor {
+		Interface {
+
+			conjugated Port pedaldata: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec pedalsensestart,pedalsenseend;'''
+			SAP timer: PTimer
+
+			external Port pedaldata
+			Attribute count: int64
+		}
+		Behavior {
+			StateMachine {
+				State SenseData {
+				}
+				Transition init0: initial -> SenseData {
+					action '''
+						count = 1;
+						timer.startTimer(5);'''
+				}
+				Transition tr0: SenseData -> SenseData {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==1||CHECKTIME==2||CHECKTIME==30||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&pedalsensestart);
+						ADASmessage.actor_1 = ((1.0e+9*pedalsensestart.tv_sec)+pedalsensestart.tv_nsec)/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.964*MULCCS;i++){
+						}
+						
+						//ADASmessage.firsttime = ((1000000000.0*pedalsensestart.tv_sec)+pedalsensestart.tv_nsec)/1000000.0;
+						ADASmessage.scenarioID = 1;
+						ADASmessage.instanceID=count;
+						//ADASmessage.prior=8;
+						pedaldata.sendData(&ADASmessage);
+						count++;
+						//if(count==10000)
+						//timer.kill();
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass AccelPedalDiagEntity {
+		Interface {
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec diagstart,diagend;
+				FILE *fp;'''
+			SAP timer: PTimer
+			Attribute count: int64
+			Attribute actor4_1_id: int32
+		}
+		Behavior {
+			StateMachine {
+				State SenseData {
+				}
+				Transition init0: initial -> SenseData {
+					action '''
+						timer.startTimer(100);
+						fp = fopen("Pedaldiag.txt", "a");
+						count=1;'''
+				}
+				Transition tr0: SenseData -> SenseData {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						if(CHECKTIME==19||CHECKTIME==20||CHECKTIME==30||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&diagstart);
+						pthread_t id;
+						id=pthread_self();
+						actor4_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.235*MULCCS;i++){
+						}
+						if(CHECKTIME==19||CHECKTIME==20||CHECKTIME==30||CHECKTIME==31&&count>0&&count<10000){
+						clock_gettime(CLOCK_MONOTONIC,&diagend);
+						//fprintf(fp, "pedalDiag:%f\n",((1.0e+9*(diagend.tv_sec-diagstart.tv_sec))+(diagend.tv_nsec-diagstart.tv_nsec))/1.0e+6);
+						fprintf(fp, "%5.6f,scenario_4,%d,instance_%d,actor_4,%f\n",((1.0e+9*(diagstart.tv_sec))+(diagstart.tv_nsec))/1.0e+6,actor4_1_id,count,((1.0e+9*(diagend.tv_sec))+(diagend.tv_nsec))/1.0e+6);
+						fflush (fp);
+						}
+						if(count==1000){
+						clock_gettime(CLOCK_MONOTONIC,&diagend);
+						//fprintf(fp, "pedalDiag:%f\n",((1.0e+9*(diagend.tv_sec-diagstart.tv_sec))+(diagend.tv_nsec-diagstart.tv_nsec))/1.0e+6);
+						fprintf(fp, "%5.6f,scenario_4,%d,instance_%d,actor_4,%f\n",((1.0e+9*(diagstart.tv_sec))+(diagstart.tv_nsec))/1.0e+6,actor4_1_id,count,((1.0e+9*(diagend.tv_sec))+(diagend.tv_nsec))/1.0e+6);
+						fclose(fp);
+						}
+						count++;
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass ThrottleSensor {
+		Interface {
+
+			conjugated Port throttledata: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec throttlesensestart,throttlesenseend;'''
+			SAP timer: PTimer
+			Attribute count: int64
+			external Port throttledata
+		}
+		Behavior {
+			StateMachine {
+				State SenseData {
+				}
+
+				Transition init0: initial -> SenseData {
+					action '''
+						count=1;
+						timer.startTimer(5);'''
+				}
+				Transition tr0: SenseData -> SenseData {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==3||CHECKTIME==30||CHECKTIME==4||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&throttlesensestart);
+						ADASmessage.actor_1 = ((1.0e+9*throttlesensestart.tv_sec)+throttlesensestart.tv_nsec)/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.337*MULCCS;i++){
+						}
+						ADASmessage.scenarioID = 2;
+						ADASmessage.instanceID=count;
+						//ADASmessage.prior=9;
+						throttledata.sendData(&ADASmessage);
+						count++;
+						//if(count==10000)
+						//timer.kill();
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass MassAirFlowSensor {
+		Interface {
+
+			conjugated Port airflowdata[1]: SendData
+			conjugated Port airflowdata2: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec airflowstart,airflowend;'''
+			SAP timer: PTimer
+			Attribute count: int64
+
+			external Port airflowdata
+			external Port airflowdata2
+		}
+		Behavior {
+			StateMachine {
+				State senseData {
+				}
+				Transition init0: initial -> senseData {
+					action '''
+						count=1;
+						timer.startTimer(5);'''
+				}
+				Transition tr0: senseData -> senseData {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==9||CHECKTIME==10||CHECKTIME==30||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&airflowstart);
+						ADASmessage.actor_1 = ((1.0e+9*airflowstart.tv_sec)+airflowstart.tv_nsec)/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.172*MULCCS;i++){
+						}
+						ADASmessage.scenarioID = 3;
+						ADASmessage.instanceID=count;
+						//ADASmessage.prior=10;
+						airflowdata.sendData(&ADASmessage);
+						airflowdata2.sendData(&ADASmessage);
+						count++;
+						//if(count==10000)
+						//timer.kill();
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass CylinerNumObserver {
+		Interface {
+			Port cylinernum1Port: SendData
+			Port cylinernum2Port: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec cylinerstart,cylinerend,cylinerstart2,cylinerend2;'''
+			SAP timer: PTimer
+
+			external Port cylinernum1Port
+			external Port cylinernum2Port
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: cylinernum1Port>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==14||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&cylinerstart);
+						ADASmessage.actor_2 = ((1.0e+9*(cylinerstart.tv_sec))+(cylinerstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_2_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*1.145*MULCCS;i++){
+						}
+						ADASmessage.actor_1=data->actor_1;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.prior=6;
+						//changePriority(pthread_self(),&self->constData->cylinernumdata1.msgService->messageQueue);
+						cylinernum1Port.recursive2(&ADASmessage);
+						
+					'''
+				}
+				Transition tr1: waitingData -> waitingData {
+					triggers {
+						<sendData: cylinernum2Port>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==18||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&cylinerstart2);
+						ADASmessage.actor_2 = ((1.0e+9*(cylinerstart2.tv_sec))+(cylinerstart2.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_2_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*1.145*MULCCS;i++){
+						}
+						ADASmessage.actor_1=data->actor_1;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.prior=7;
+						
+						//changePriority(pthread_self(),&self->constData->cylinernumdata2.msgService->messageQueue);
+						cylinernum2Port.recursive2(&ADASmessage);
+						
+						
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass pedalvoter {
+		Interface {
+			Port pedalvoterdata: SendData
+			conjugated Port feeldata: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec voterstart,voterend;'''
+
+			external Port pedalvoterdata
+			external Port feeldata
+			Attribute recvthrottlesensetime: float64
+			Attribute recvfirsttime: float64
+			Attribute recvpedalsensetime: float64
+			Attribute recvairsystemstarttime: float64
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData {
+					action '''//kkr1017'''
+				}
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: pedalvoterdata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==6||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&voterstart);
+						ADASmessage.actor_2 = ((1.0e+9*(voterstart.tv_sec))+(voterstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_2_id=(int)id;
+						}
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						//ADASmessage.prior=2;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.287*MULCCS;i++){
+						}
+						feeldata.sendData(&ADASmessage);
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass pedalfeel {
+		Interface {
+			Port feeldata: SendData
+			conjugated Port feeldatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec feelstart,feelend;'''
+
+			external Port feeldata
+			external Port feeldatasend
+			Attribute recvthrottlesensetime: float64
+			Attribute recvfirsttime: float64
+			Attribute recvpedalsensetime: float64
+			Attribute recvairsystemstarttime: float64
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: feeldata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==6||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&feelstart);
+						ADASmessage.actor_3 = ((1.0e+9*(feelstart.tv_sec))+(feelstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_3_id=(int)id;
+						}
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_2=data->actor_2;
+						ADASmessage.actor_1_id=data->actor_1_id;
+						ADASmessage.actor_2_id=data->actor_2_id;
+						//ADASmessage.prior=2;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.783*MULCCS;i++){
+						}
+						feeldatasend.sendData(&ADASmessage);
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass throttlecontroller {
+		Interface {
+			Port throttledata: SendData
+			conjugated Port throttledatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec throcontrolstart,throcontrolend;'''
+
+			external Port throttledata
+			external Port throttledatasend
+			Attribute recvthrottlesensetime: float64
+			Attribute recvfirsttime: float64
+			Attribute recvpedalsensetime: float64
+			Attribute recvairsystemstarttime: float64
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: throttledata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==6||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&throcontrolstart);
+						ADASmessage.actor_4 = ((1.0e+9*(throcontrolstart.tv_sec))+(throcontrolstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_4_id=(int)id;
+						}
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_3 = data->actor_3;
+						ADASmessage.actor_2 = data->actor_2;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.actor_3_id = data->actor_3_id;
+						//ADASmessage.prior=2;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*5*MULCCS;i++){
+						}
+						throttledatasend.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass AirSystem {
+		Interface {
+			Port throttlePort: SendData
+
+			conjugated Port throttledata: SendData
+			Port padalPort: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <math.h>
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec airsysstart2,airsysstart,airsysend,throsensestart,throsenseend,pedalsensestart,pedalsenseend;
+				FILE *fp1;
+				FILE *fp2;'''
+			external Port throttlePort
+			Attribute recvthrottlesensetime: float64
+			Attribute recvthrottlesensefirsttime: float64
+			Attribute recvpedalfirsttime: float64
+			Attribute recvpedalsensetime: float64
+			Attribute pedalscen: int64
+			Attribute pedalins: int64
+			Attribute throttlescen: int64
+			Attribute throttleins: int64
+			Attribute pedalemer: int32
+			Attribute throttleemer: int32
+			Attribute count2: int32
+			Attribute count3: int32
+			Attribute count4: int32
+			Attribute actor1_1_id: int32
+			Attribute actor1_2_id: int32
+			Attribute actor2_1_id: int32
+			Attribute actor2_2_id: int32
+			SAP timer: PTimer
+			external Port throttledata
+			external Port padalPort
+
+			conjugated Port internalpedal: SendData
+
+			ActorRef pedalvoter: pedalvoter
+			ActorRef pedalfeel: pedalfeel
+			ActorRef throttlecontroller: throttlecontroller
+			Port Internalthrottle: SendData
+
+			Binding internalpedal and pedalvoter.pedalvoterdata
+			Binding pedalvoter.feeldata and pedalfeel.feeldata
+			Binding pedalfeel.feeldatasend and throttlecontroller.throttledata
+			Binding throttlecontroller.throttledatasend and Internalthrottle
+		}
+		Behavior {
+			StateMachine {
+
+				State waiting
+				Transition init0: initial -> waiting {
+					action '''
+						fp2 = fopen("throttlesensor.txt", "a");
+						fp1 = fopen("pedalsensor.txt", "a");
+						count2=1;
+						timer.startTimer(10);'''
+				}
+				Transition tr2: waiting -> cp cp0 {
+					triggers {
+						<sendData: throttlePort>
+					}
+					action '''
+						if(CHECKTIME==4||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&throsensestart);
+						pthread_t id;
+						id=pthread_self();
+						actor2_2_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.06*MULCCS;i++){
+						}
+						actor2_1_id = data->actor_1_id;
+						recvthrottlesensetime = data->actor_1;
+						throttlescen = data->scenarioID;
+						throttleins = data->instanceID;
+					'''
+				}
+				Transition tr0: waiting -> cp cp1 {
+					triggers {
+						<sendData: padalPort>
+					}
+					action '''
+						if(CHECKTIME==2||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&pedalsensestart);
+						pthread_t id;
+						id=pthread_self();
+						actor1_2_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.05*MULCCS;i++){
+						}
+						actor1_1_id = data->actor_1_id;
+						recvpedalsensetime=data->actor_1;
+						//recvpedalfirsttime=data->firsttime;
+						pedalscen=data->scenarioID;
+						pedalins=data->instanceID;'''
+				}
+
+				Transition tr1: waiting -> waiting {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==5||CHECKTIME==6||CHECKTIME==30||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&airsysstart);
+						ADASmessage.actor_1 = ((1.0e+9*airsysstart.tv_sec)+airsysstart.tv_nsec)/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.05*MULCCS;i++){
+						}
+						ADASmessage.instanceID = count2;
+						//ADASmessage.prior=2;
+						
+						internalpedal.sendData(&ADASmessage);
+						count2++;
+						//if(count2==10000)
+						//timer.kill();
+					'''
+				}
+				Transition tr3: waiting -> waiting {
+					triggers {
+						<sendData: Internalthrottle>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						clock_gettime(CLOCK_MONOTONIC,&airsysstart2);
+						ADASmessage.actor_5 = ((1.0e+9*(airsysstart2.tv_sec))+(airsysstart2.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_5_id=(int)id;
+						ADASmessage.scenarioID=5;
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_3 = data->actor_3;
+						ADASmessage.actor_2 = data->actor_2;
+						ADASmessage.actor_4 = data->actor_4;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.actor_3_id = data->actor_3_id;
+						ADASmessage.actor_4_id = data->actor_4_id;
+						//ADASmessage.prior=2;
+						throttledata.sendData(&ADASmessage);
+						//timer.startTimeout(10);'''
+				}
+				ChoicePoint cp0
+				Transition tr4: cp cp0 -> waiting {
+				}
+				Transition tr5: cp cp0 -> waiting {
+					cond '''
+						throttleins==10000
+					'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&throsenseend);
+						//changePriority(pthread_self(),&self->constData->throttlePort.msgService->messageQueue);
+						if(CHECKTIME==3||CHECKTIME==30){
+						fprintf(fp2, "scenarionum:%d, instancenum: %d, totaltime:%f\n",throttlescen,throttleins,((((1.0e+9*throsenseend.tv_sec)+throsenseend.tv_nsec)/1.0e+6)-recvthrottlesensetime));
+						}
+						else if(CHECKTIME==4||CHECKTIME==31){
+						//fprintf(fp2, "scenarionum:%d, instancenum: %d,thottlesensor:%f, airsys: %f, totaltime:%f\n",throttlescen,throttleins, recvthrottlesensetime,((1.0e+9*(throsensestart.tv_sec))+throsensestart.tv_nsec)/1.0e+6,((((1.0e+9*throsenseend.tv_sec)+throsenseend.tv_nsec)/1.0e+6)-recvthrottlesensetime));
+						fprintf(fp2, "%5.6f,scenario_2,%d,instance_%d,actor_2,%f\n%f,scenario_2,%d,instance_%d,actor_5,%f\n",recvthrottlesensetime,actor2_1_id,throttleins,((((1.0e+9*throsenseend.tv_sec)+throsenseend.tv_nsec)/1.0e+6)),((1.0e+9*(throsensestart.tv_sec))+throsensestart.tv_nsec)/1.0e+6,actor2_2_id,throttleins,((((1.0e+9*throsenseend.tv_sec)+throsenseend.tv_nsec)/1.0e+6)));
+						}
+						fclose(fp2);
+					'''
+				}
+				Transition tr6: cp cp0 -> waiting {
+					cond '''throttleemer==1'''
+				}
+				ChoicePoint cp1
+				Transition tr7: cp cp1 -> waiting {
+				}
+				Transition tr8: cp cp1 -> waiting {
+					cond '''pedalins==10000'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&pedalsenseend);
+						//changePriority(pthread_self(),&self->constData->padalPort.msgService->messageQueue);
+						if(CHECKTIME==1||CHECKTIME==30){
+						fprintf(fp1, "scenarionum:%d, instancenum: %d, totaltime:%f\n",pedalscen,pedalins,((((1.0e+9*pedalsenseend.tv_sec)+pedalsenseend.tv_nsec)/1.0e+6)-recvpedalsensetime));
+						}
+						else if (CHECKTIME==2||CHECKTIME==31){
+						fprintf(fp1, "%5.6f,scenario_1,%d,instance_%d,actor_1,%f\n%f,scenario_1,%d,instance_%d,actor_5,%f\n",recvpedalsensetime,actor1_1_id,pedalins,((((1.0e+9*pedalsenseend.tv_sec)+pedalsenseend.tv_nsec)/1.0e+6)),((1.0e+9*(pedalsensestart.tv_sec))+(pedalsensestart.tv_nsec))/1.0e+6,actor1_2_id,pedalins,((((1.0e+9*pedalsenseend.tv_sec)+pedalsenseend.tv_nsec)/1.0e+6)));
+						}
+						fclose (fp1);
+					'''
+				}
+				Transition tr9: cp cp1 -> waiting {
+					cond '''pedalemer==1'''
+				}
+				Transition tr10: cp cp0 -> waiting {
+					cond '''
+						throttleins<10000&&throttleins>0
+						
+					'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&throsenseend);
+						//changePriority(pthread_self(),&self->constData->throttlePort.msgService->messageQueue);
+						if(CHECKTIME==3||CHECKTIME==30){
+						fprintf(fp2, "scenarionum:%d, instancenum: %d, totaltime:%f\n",throttlescen,throttleins,((((1.0e+9*throsenseend.tv_sec)+throsenseend.tv_nsec)/1.0e+6)-recvthrottlesensetime));
+						}
+						else if(CHECKTIME==4||CHECKTIME==31){
+						//fprintf(fp2, "scenarionum:%d, instancenum: %d,thottlesensor:%f, airsys: %f, totaltime:%f\n",throttlescen,throttleins, recvthrottlesensetime,((1.0e+9*(throsensestart.tv_sec))+throsensestart.tv_nsec)/1.0e+6,((((1.0e+9*throsenseend.tv_sec)+throsenseend.tv_nsec)/1.0e+6)-recvthrottlesensetime));
+						fprintf(fp2, "%5.6f,scenario_2,%d,instance_%d,actor_2,%f\n%f,scenario_2,%d,instance_%d,actor_5,%f\n",recvthrottlesensetime,actor2_1_id,throttleins,((((1.0e+9*throsenseend.tv_sec)+throsenseend.tv_nsec)/1.0e+6)),((1.0e+9*(throsensestart.tv_sec))+throsensestart.tv_nsec)/1.0e+6,actor2_2_id,throttleins,(((1.0e+9*throsenseend.tv_sec)+throsenseend.tv_nsec)/1.0e+6));
+						
+						}
+						fflush(fp2);
+					'''
+				}
+				Transition tr11: cp cp1 -> waiting {
+					cond '''
+						pedalins<10000&&pedalins>0
+					'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&pedalsenseend);
+						//changePriority(pthread_self(),&self->constData->padalPort.msgService->messageQueue);
+						if(CHECKTIME==1||CHECKTIME==30){
+						fprintf(fp1, "scenarionum:%d, instancenum: %d, totaltime:%f\n",pedalscen,pedalins,((((1.0e+9*pedalsenseend.tv_sec)+pedalsenseend.tv_nsec)/1.0e+6)-recvpedalsensetime));
+						}
+						else if (CHECKTIME==2||CHECKTIME==31){
+						fprintf(fp1, "%5.6f,scenario_1,%d,instance_%d,actor_1,%f\n%f,scenario_1,%d,instance_%d,actor_5,%f\n",recvpedalsensetime,actor1_1_id,pedalins,((((1.0e+9*pedalsenseend.tv_sec)+pedalsenseend.tv_nsec)/1.0e+6)),((1.0e+9*(pedalsensestart.tv_sec))+(pedalsensestart.tv_nsec))/1.0e+6,actor1_2_id,pedalins,((((1.0e+9*pedalsenseend.tv_sec)+pedalsenseend.tv_nsec)/1.0e+6)));
+						}
+						fflush(fp1);
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass FuelingSystem {
+		Interface {
+			Port airflowPort: SendData
+
+			conjugated Port injectiondata: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec fuelstart2,fuelstart,fuelend,airsensestart,airsenseend;
+				FILE *fp5;'''
+			external Port airflowPort
+			SAP timer: PTimer
+			Attribute recvairflowsensetime: float64
+			Attribute recvfirsttime: float64
+			Attribute airflowemer: int32
+			Attribute airflowscen: int64
+			Attribute airflowins: int64
+			Attribute count: int64
+			Attribute tempairflowsensetime: float64
+			Attribute tempfirsttime: float64
+			Attribute actor3_1_id: int32
+			Attribute actor3_2_id: int32
+			external Port injectiondata
+			Binding fuelingInternalIn and AirMassFlow.airmassdata
+			Binding AirMassFlow.airmassdatasend and BassFuelMass.bassfueldata
+			Binding BassFuelMass.bassfueldatasend and TransientFurlingCompensation.transientfueldata
+
+			Binding TransientFurlingCompensation.transientfueldatasend and fuelingInternalOut
+			ActorRef AirMassFlow: AirMassFlowChanger
+			ActorRef BassFuelMass: BassFuelMassEntity
+			ActorRef TransientFurlingCompensation: TransientFuelingCompensationEntity
+
+			conjugated Port fuelingInternalIn: SendData
+			Port fuelingInternalOut: SendData
+		}
+		Behavior {
+			StateMachine {
+				State waitingData
+
+				Transition init0: initial -> waitingData {
+					action '''
+						count=1;
+						fp5 = fopen("MassAir_inject.txt", "a");
+						timer.startTimer(10);'''
+				}
+
+				Transition tr4: waitingData -> cp cp0 {
+					triggers {
+						<sendData: airflowPort>
+					}
+					action '''
+						if(CHECKTIME==10||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&airsensestart);
+						pthread_t id;
+						id=pthread_self();
+						actor3_2_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.06*MULCCS;i++){
+						}
+						actor3_1_id = data->actor_1_id;
+						recvairflowsensetime=data->actor_1;//WCET of MassairflowSensor runnable
+						airflowscen = data->scenarioID;
+						airflowins = data->instanceID;
+					'''
+				}
+
+				Transition tr5: waitingData -> waitingData {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==11||CHECKTIME==12||CHECKTIME==30||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&fuelstart);
+						ADASmessage.actor_1 = ((1.0e+9*fuelstart.tv_sec)+fuelstart.tv_nsec)/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.06*MULCCS;i++){
+						}
+						ADASmessage.instanceID = count;
+						//ADASmessage.prior=3;
+						
+						fuelingInternalIn.sendData(&ADASmessage);
+						count++;
+						//if(count==10000)
+						//timer.kill();
+					'''
+				}
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: fuelingInternalOut>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						clock_gettime(CLOCK_MONOTONIC,&fuelstart2);
+						ADASmessage.actor_5 = ((1.0e+9*(fuelstart2.tv_sec))+(fuelstart2.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_5_id=(int)id;
+						ADASmessage.scenarioID=6;
+						ADASmessage.instanceID=data->instanceID;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_2 =data->actor_2;
+						ADASmessage.actor_3 =data->actor_3;
+						ADASmessage.actor_4 =data->actor_4;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.actor_3_id = data->actor_3_id;
+						ADASmessage.actor_4_id = data->actor_4_id;
+						//ADASmessage.prior=3;
+						injectiondata.sendData(&ADASmessage);
+						
+					'''
+				}
+				ChoicePoint cp0
+				Transition tr1: cp cp0 -> waitingData {
+				}
+				Transition tr2: cp cp0 -> waitingData {
+					cond '''airflowemer==1'''
+				}
+				Transition tr3: cp cp0 -> waitingData {
+					cond '''airflowins==10000'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&airsenseend);
+						//changePriority(pthread_self(),&self->constData->airflowPort.msgService->messageQueue);
+						if(CHECKTIME==9||CHECKTIME==30){
+						fprintf(fp5, "scenarionum: %d,instancenum: %d, totaltime:%f\n",airflowscen,airflowins,((((1.0e+9*airsenseend.tv_sec)+airsenseend.tv_nsec)/1.0e+6)-recvairflowsensetime));
+						}
+						else if(CHECKTIME==10||CHECKTIME==31){
+						//fprintf(fp5, "scenarionum: %d,instancenum: %d, airflowsensor:%f, fuelsys:%f, totaltime:%f\n",airflowscen,airflowins, recvairflowsensetime,((1.0e+9*(airsensestart.tv_sec))+(airsensestart.tv_nsec))/1.0e+6,((((1.0e+9*airsenseend.tv_sec)+airsenseend.tv_nsec)/1.0e+6)-recvairflowsensetime));
+						fprintf(fp5, "%5.6f,scenario_3,%d,instance_%d,actor_3,%f\n%f,scenario_3,%d,instance_%d,actor_6,%f\n",recvairflowsensetime,actor3_1_id,airflowins,((((1.0e+9*airsenseend.tv_sec)+airsenseend.tv_nsec)/1.0e+6)),((1.0e+9*(airsensestart.tv_sec))+(airsensestart.tv_nsec))/1.0e+6,actor3_2_id,airflowins,((((1.0e+9*airsenseend.tv_sec)+airsenseend.tv_nsec)/1.0e+6)));
+						}
+						fclose (fp5);
+					'''
+				}
+				Transition tr6: cp cp0 -> waitingData {
+					cond '''airflowins<10000&&airflowins>0'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&airsenseend);
+						//changePriority(pthread_self(),&self->constData->airflowPort.msgService->messageQueue);
+						if(CHECKTIME==9||CHECKTIME==30){
+						fprintf(fp5, "scenarionum: %d,instancenum: %d, totaltime:%f\n",airflowscen,airflowins,((((1.0e+9*airsenseend.tv_sec)+airsenseend.tv_nsec)/1.0e+6)-recvairflowsensetime));
+						}
+						else if(CHECKTIME==10||CHECKTIME==31){
+						//fprintf(fp5, "scenarionum: %d,instancenum: %d, airflowsensor:%f, fuelsys:%f, totaltime:%f\n",airflowscen,airflowins, recvairflowsensetime,((1.0e+9*(airsensestart.tv_sec))+(airsensestart.tv_nsec))/1.0e+6,((((1.0e+9*airsenseend.tv_sec)+airsenseend.tv_nsec)/1.0e+6)-recvairflowsensetime));
+						fprintf(fp5, "%5.6f,scenario_3,%d,instance_%d,actor_3,%f\n%f,scenario_3,%d,instance_%d,actor_6,%f\n",recvairflowsensetime,actor3_1_id,airflowins,((((1.0e+9*airsenseend.tv_sec)+airsenseend.tv_nsec)/1.0e+6)),((1.0e+9*(airsensestart.tv_sec))+(airsensestart.tv_nsec))/1.0e+6,actor3_2_id,airflowins,((((1.0e+9*airsenseend.tv_sec)+airsenseend.tv_nsec)/1.0e+6)));
+						}
+						fflush(fp5);
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass AirMassFlowChanger {
+		Interface {
+			Port airmassdata: SendData
+			conjugated Port airmassdatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec airflowstart,airflowend;'''
+
+			external Port airmassdata
+			external Port airmassdatasend
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: airmassdata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==12||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&airflowstart);
+						ADASmessage.actor_2 = ((1.0e+9*(airflowstart.tv_sec))+(airflowstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_2_id=(int)id;
+						
+						}
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 =data->actor_1;
+						//ADASmessage.prior=3;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.783*MULCCS;i++){
+						}
+						airmassdatasend.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass BassFuelMassEntity {
+		Interface {
+			Port bassfueldata: SendData
+			conjugated Port bassfueldatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec bassfuelstart,bassfuelend;'''
+
+			external Port bassfueldata
+			external Port bassfueldatasend
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: bassfueldata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==12||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&bassfuelstart);
+						ADASmessage.actor_3 = ((1.0e+9*(bassfuelstart.tv_sec))+(bassfuelstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_3_id=(int)id;
+						
+						}
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 =data->actor_1;
+						ADASmessage.actor_2 =data->actor_2;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						//ADASmessage.prior=3;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*5*MULCCS;i++){
+						}
+						bassfueldatasend.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass TransientFuelingCompensationEntity {
+		Interface {
+			Port transientfueldata: SendData
+			conjugated Port transientfueldatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec transientstart,transientend;'''
+
+			external Port transientfueldata
+			external Port transientfueldatasend
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: transientfueldata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==12||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&transientstart);
+						ADASmessage.actor_4 = ((1.0e+9*(transientstart.tv_sec))+(transientstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_4_id=(int)id;
+						
+						}
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 =data->actor_1;
+						ADASmessage.actor_2 =data->actor_2;
+						ADASmessage.actor_3 =data->actor_3;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.actor_3_id = data->actor_3_id;
+						//ADASmessage.prior=3;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*6.376*MULCCS;i++){
+						}
+						transientfueldatasend.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass TotalFuelingEntity {
+		Interface {
+			Port totalfueldata: SendData
+			conjugated Port totalfueldatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec totalfuelstart,totalfuelend;'''
+
+			external Port totalfueldata
+			external Port totalfueldatasend
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: totalfueldata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==14||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&totalfuelstart);
+						ADASmessage.actor_3 = ((1.0e+9*(totalfuelstart.tv_sec))+(totalfuelstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_3_id=(int)id;
+						
+						}
+						ADASmessage.instanceID=data->instanceID;
+						ADASmessage.actor_2 = data->actor_2;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.actor_5 = data->actor_5;
+						ADASmessage.actor_5_id = data->actor_5_id;
+						//ADASmessage.prior=6;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*1.354*MULCCS;i++){
+						}
+						totalfueldatasend.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass IgnitionSystem {
+		Interface {
+			Port airflowPort: SendData
+
+			conjugated Port ignitiondata: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec ignistart2,ignistart,igniend,airflowstart,airflowend;
+				FILE *fp8;'''
+			external Port airflowPort
+			SAP timer: PTimer
+			Attribute priority: int32
+			Attribute priority2: int32
+			Attribute recvfirsttime: float64
+			Attribute recvairflowsensetime: float64
+			Attribute airflowemer: int32
+			Attribute airflowscen: int32
+			Attribute airflowins: int32
+			Attribute actor3_1_id: int32
+			Attribute actor3_2_id: int32
+			Attribute count: int64
+			external Port ignitiondata
+			Binding ignitionInternalIn and AirMassFlow.massflowdata
+			ActorRef AirMassFlow: AirMassFlowEntity
+			conjugated Port ignitionInternalIn: SendData
+			Port ignitionInternalOut: SendData
+
+			Binding AirMassFlow.massflowdatasend and BassFuelMass2.bassfueldata2
+
+			ActorRef BassFuelMass2: BassFuelMassEntity2
+			Binding BassFuelMass2.bassfueldatasend2 and ignitionInternalOut
+		}
+		Behavior {
+			StateMachine {
+				State waitingData
+
+				Transition init0: initial -> waitingData {
+					action '''
+						count=1;
+						fp8 = fopen("MassAir_ignition.txt", "a");
+						timer.startTimer(10);'''
+				}
+
+				Transition tr2: waitingData -> cp cp0 {
+					triggers {
+						<sendData: airflowPort>
+					}
+					action '''
+						if(CHECKTIME==10||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&airflowstart);
+						pthread_t id;
+						id=pthread_self();
+						
+						actor3_2_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.03;i++){
+						}
+						actor3_1_id = data->actor_1_id;
+						recvairflowsensetime=data->actor_1;//WCET of MassairflowSensor runnable
+						airflowscen = data->scenarioID;
+						airflowins = data->instanceID;'''
+				}
+				Transition tr3: waitingData -> waitingData {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==15||CHECKTIME==16||CHECKTIME==30||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&ignistart);
+						ADASmessage.actor_1 = ((1.0e+9*ignistart.tv_sec)+ignistart.tv_nsec)/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.05*MULCCS;i++){
+						}
+						ADASmessage.instanceID = count;
+						//ADASmessage.prior=4;
+						ignitionInternalIn.sendData(&ADASmessage);
+						count++;
+						//if(count==10000)
+						//timer.kill();
+					'''
+				}
+				Transition tr4: waitingData -> waitingData {
+					triggers {
+						<sendData: ignitionInternalOut>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						clock_gettime(CLOCK_MONOTONIC,&ignistart2);
+						ADASmessage.actor_4 = ((1.0e+9*(ignistart2.tv_sec))+(ignistart2.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_4_id=(int)id;
+						ADASmessage.scenarioID=7;
+						ADASmessage.instanceID=data->instanceID;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_2 =data->actor_2;
+						ADASmessage.actor_3=data->actor_3;
+						ADASmessage.actor_1_id=data->actor_1_id;
+						ADASmessage.actor_2_id=data->actor_2_id;
+						ADASmessage.actor_3_id=data->actor_3_id;
+						//ADASmessage.prior=4;
+						ignitiondata.sendData(&ADASmessage);
+					'''
+				}
+				ChoicePoint cp0
+				Transition tr0: cp cp0 -> waitingData {
+				}
+				Transition tr1: cp cp0 -> waitingData {
+					cond '''airflowins==10000'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&airflowend);
+						//changePriority(pthread_self(),&self->constData->airflowPort.msgService->messageQueue);
+						if(CHECKTIME==9||CHECKTIME==30){
+						fprintf(fp8, "scenarionum: %d, instancenum: %d, totaltime:%f\n",airflowscen,airflowins, ((((1.0e+9*airflowend.tv_sec)+airflowend.tv_nsec)/1.0e+6)-recvairflowsensetime));
+						}
+						else if(CHECKTIME==10||CHECKTIME==31){
+						//fprintf(fp8, "scenarionum: %d, instancenum: %d,airflowsensor:%f, ignisys:%f, totaltime:%f\n",airflowscen,airflowins, recvairflowsensetime,((1.0e+9*(airflowstart.tv_sec))+(airflowstart.tv_nsec))/1.0e+6,((((1.0e+9*airflowend.tv_sec)+airflowend.tv_nsec)/1.0e+6)-recvairflowsensetime));
+						fprintf(fp8, "%5.6f,scenario_3,%d,instance_%d,actor_3,%f\n%f,scenario_3,%d,instance_%d,actor_7,%f\n",recvairflowsensetime,actor3_1_id,airflowins,((((1.0e+9*airflowend.tv_sec)+airflowend.tv_nsec)/1.0e+6)),((1.0e+9*(airflowstart.tv_sec))+(airflowstart.tv_nsec))/1.0e+6,actor3_2_id,airflowins,((((1.0e+9*airflowend.tv_sec)+airflowend.tv_nsec)/1.0e+6)));
+						}
+						fclose(fp8);
+					'''
+				}
+				Transition tr5: cp cp0 -> waitingData {
+					cond '''airflowemer==1'''
+				}
+				Transition tr6: cp cp0 -> waitingData {
+					cond '''airflowins<10000&&airflowins>0'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&airflowend);
+						//changePriority(pthread_self(),&self->constData->airflowPort.msgService->messageQueue);
+						
+						if(CHECKTIME==9||CHECKTIME==30){
+						fprintf(fp8, "scenarionum: %d, instancenum: %d, totaltime:%f\n",airflowscen,airflowins, ((((1.0e+9*airflowend.tv_sec)+airflowend.tv_nsec)/1.0e+6)-recvairflowsensetime));
+						}
+						else if(CHECKTIME==10||CHECKTIME==31){
+						//fprintf(fp8, "scenarionum: %d, instancenum: %d,airflowsensor:%f, ignisys:%f, totaltime:%f\n",airflowscen,airflowins, recvairflowsensetime,((1.0e+9*(airflowstart.tv_sec))+(airflowstart.tv_nsec))/1.0e+6,((((1.0e+9*airflowend.tv_sec)+airflowend.tv_nsec)/1.0e+6)-recvairflowsensetime));
+						fprintf(fp8, "%5.6f,scenario_3,%d,instance_%d,actor_3,%f\n%f,scenario_3,%d,instance_%d,actor_7,%f\n",recvairflowsensetime,actor3_1_id,airflowins,((((1.0e+9*airflowend.tv_sec)+airflowend.tv_nsec)/1.0e+6)),((1.0e+9*(airflowstart.tv_sec))+(airflowstart.tv_nsec))/1.0e+6,actor3_2_id,airflowins,((((1.0e+9*airflowend.tv_sec)+airflowend.tv_nsec)/1.0e+6)));
+						}
+						fflush(fp8);
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass AirMassFlowEntity {
+		Interface {
+			Port massflowdata: SendData
+			conjugated Port massflowdatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec airmassstart,airmassend;'''
+
+			external Port massflowdata
+			external Port massflowdatasend
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: massflowdata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==16||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&airmassstart);
+						ADASmessage.actor_2 = ((1.0e+9*(airmassstart.tv_sec))+(airmassstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_2_id=(int)id;
+						}
+						ADASmessage.actor_1_id=data->actor_1_id;
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 =data->actor_1;
+						ADASmessage.prior=4;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.783*MULCCS;i++){
+						}
+						massflowdatasend.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass BassFuelMassEntity2 {
+		Interface {
+			Port bassfueldata2: SendData
+			conjugated Port bassfueldatasend2: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec bassfuelstart2,bassfuelend2;'''
+
+			external Port bassfueldata2
+			external Port bassfueldatasend2
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: bassfueldata2>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==16||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&bassfuelstart2);
+						ADASmessage.actor_3 = ((1.0e+9*(bassfuelstart2.tv_sec))+(bassfuelstart2.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_3_id=(int)id;
+						}
+						ADASmessage.actor_1_id=data->actor_1_id;
+						ADASmessage.actor_2_id=data->actor_2_id;
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 =data->actor_1;
+						ADASmessage.actor_2 =data->actor_2;
+						ADASmessage.prior=4;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*5*MULCCS;i++){
+						}
+						bassfueldatasend2.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass IgnitionTimingEntity {
+		Interface {
+			Port ignitiontimingdata: SendData
+			conjugated Port ignitiontimingdatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec ignitimestart,ignitimeend;'''
+
+			external Port ignitiontimingdata
+			external Port ignitiontimingdatasend
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: ignitiontimingdata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==18||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&ignitimestart);
+						ADASmessage.actor_3 = ((1.0e+9*(ignitimestart.tv_sec))+(ignitimestart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_3_id=(int)id;
+						}
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.instanceID=data->instanceID;
+						ADASmessage.actor_2 = data->actor_2;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_5 = data->actor_5;
+						ADASmessage.actor_5_id = data->actor_5_id;
+						//ADASmessage.prior=7;
+						for(int i =0;i<ONE_Milli_SEC_CONUT*4.537*MULCCS;i++){
+						}
+						ignitiontimingdatasend.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass ThrottleActuator {
+		Interface {
+
+			// Port veloPort: SendData
+			// conjugated Port velodata: PSendData
+			Port throttlePort: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec throactstart,throactend,airsysstart,airsysend;
+				FILE *fp3;
+				FILE *fp4;'''
+			external Port throttlePort
+			SAP timer: PTimer
+			Attribute recvscenarioID: int32
+			Attribute recvinstanceID: int32
+			Attribute recvemer: int32
+			Attribute count: int32
+			Attribute recvairsystemstarttime: float64
+			Attribute recvthrottlesensetime: float64
+			Attribute recvfirsttime: float64
+			Attribute recvpedalsensetime: float64
+			Attribute recvpedalvotertime: float64
+			Attribute recvpedalfeeltime: float64
+			Attribute recvthrottlecontrollertime: float64
+			Attribute recvairsystemtime: float64
+			Attribute recvairsystemtime2: float64
+			Attribute thtacttime: float64
+			Attribute actor5_1_id: int32
+			Attribute actor5_2_id: int32
+			Attribute actor5_3_id: int32
+			Attribute actor5_4_id: int32
+			Attribute actor5_5_id: int32
+			Attribute actor5_6_id: int32
+			Attribute actor8_1_id: int32
+		}
+		Behavior {
+			StateMachine {
+				State throttleactuator
+
+				Transition init0: initial -> throttleactuator {
+					action '''
+						fp3 = fopen("airsystem.txt", "a");
+						fp4 = fopen("throttleactuator.txt", "a");
+						count=1;
+						timer.startTimer(10);'''
+				}
+				Transition tr0: throttleactuator -> cp cp0 {
+					triggers {
+						<sendData: throttlePort>
+					}
+					action '''
+						if(CHECKTIME==6||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&airsysstart);
+						pthread_t id;
+						id=pthread_self();
+						actor5_6_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.49*MULCCS;i++){
+						}
+						recvairsystemstarttime=data->actor_1;
+						recvairsystemtime2=data->actor_5;
+						recvscenarioID=data->scenarioID;
+						recvinstanceID=data->instanceID;
+						recvpedalvotertime=data->actor_2;
+						recvpedalfeeltime=data->actor_3;
+						recvthrottlecontrollertime=data->actor_4;
+						actor5_1_id=data->actor_1_id;
+						actor5_2_id=data->actor_2_id;
+						actor5_3_id=data->actor_3_id;
+						actor5_4_id=data->actor_4_id;
+						actor5_5_id=data->actor_5_id;
+						recvemer=data->emergency;'''
+				}
+				Transition tr1: throttleactuator -> cp cp1 {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+												if(CHECKTIME==7||CHECKTIME==8||CHECKTIME==30||CHECKTIME==31){
+												clock_gettime(CLOCK_MONOTONIC,&throactstart);
+												pthread_t id;
+												id=pthread_self();
+												actor8_1_id=(int)id;
+												}
+												for(int i =0;i<ONE_Milli_SEC_CONUT*5.913*MULCCS;i++){
+												}
+												count++;
+						//						if(count==10000)
+						//							timer.kill();
+					'''
+				}
+				ChoicePoint cp0
+				Transition tr2: cp cp0 -> throttleactuator {
+				}
+				Transition tr3: cp cp0 -> throttleactuator {
+					cond '''recvinstanceID==10000'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&airsysend);
+						//changePriority(pthread_self(),&self->constData->throttlePort.msgService->messageQueue);
+						if(CHECKTIME==5||CHECKTIME==30){
+						fprintf(fp3, "scenarionum:%d, instancenum; %d,totaltime:%f\n",recvscenarioID,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)-recvairsystemstarttime));
+						}
+						else if(CHECKTIME==6||CHECKTIME==31){
+						//fprintf(fp3, "scenarionum:%d, instancenum; %d, airsystem:%f, pedalvotertime:%f, pedalfeeltime:%f, throttlecontrollertime:%f, airact:%f, totaltime:%f\n",recvscenarioID,recvinstanceID, recvairsystemstarttime,recvpedalvotertime,recvpedalfeeltime,recvthrottlecontrollertime,((1.0e+9*(airsysstart.tv_sec))+(airsysstart.tv_nsec))/1.0e+6,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)-recvairsystemstarttime));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_5,%f\n",recvairsystemstarttime,actor5_1_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_11,%f\n",recvpedalvotertime,actor5_2_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_12,%f\n",recvpedalfeeltime,actor5_3_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_13,%f\n",recvthrottlecontrollertime,actor5_4_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_5,%f\n",recvairsystemtime2,actor5_5_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_8,%f\n",((1.0e+9*(airsysstart.tv_sec))+(airsysstart.tv_nsec))/1.0e+6,actor5_6_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						}
+						fclose(fp3);
+						
+						
+					'''
+				}
+				ChoicePoint cp1
+				Transition tr4: cp cp0 -> throttleactuator {
+					cond '''recvemer==1'''
+				}
+				Transition tr5: cp cp1 -> throttleactuator {
+				}
+				Transition tr6: cp cp1 -> throttleactuator {
+					cond '''count==10000'''
+					action '''
+						if(CHECKTIME==7||CHECKTIME==30){
+						clock_gettime(CLOCK_MONOTONIC,&throactend);
+						fprintf(fp4, "instancenum: %d,throttleact:%f\n",count,((1.0e+9*(throactend.tv_sec-throactstart.tv_sec))+(throactend.tv_nsec-throactstart.tv_nsec))/1.0e+6);
+						fclose(fp4);
+						}
+						else if (CHECKTIME==8||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&throactend);
+						//fprintf(fp4, "instancenum: %d,throttleact:%f\n",count,((1.0e+9*(throactend.tv_sec-throactstart.tv_sec))+(throactend.tv_nsec-throactstart.tv_nsec))/1.0e+6);
+						fprintf(fp4, "%5.6f,scenario_8,%d,instance_%d,actor_8,%f\n",((1.0e+9*(throactstart.tv_sec))+(throactstart.tv_nsec))/1.0e+6,actor8_1_id,count,((1.0e+9*(throactend.tv_sec))+(throactend.tv_nsec))/1.0e+6);
+						fclose(fp4);
+						}
+					'''
+				}
+				Transition tr7: cp cp1 -> throttleactuator {
+					cond '''count>0&&count<10000'''
+					action '''
+						if(CHECKTIME==7||CHECKTIME==30){
+						clock_gettime(CLOCK_MONOTONIC,&throactend);
+						fprintf(fp4, "instancenum: %d,throttleact:%f\n",count,((1.0e+9*(throactend.tv_sec-throactstart.tv_sec))+(throactend.tv_nsec-throactstart.tv_nsec))/1.0e+6);
+						fflush(fp4);
+						}
+						else if (CHECKTIME==8||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&throactend);
+						//fprintf(fp4, "instancenum: %d,throttleact:%f\n",count,((1.0e+9*(throactend.tv_sec-throactstart.tv_sec))+(throactend.tv_nsec-throactstart.tv_nsec))/1.0e+6);
+						fprintf(fp4, "%5.6f,scenario_8,%d,instance_%d,actor_8,%f\n",((1.0e+9*(throactstart.tv_sec))+(throactstart.tv_nsec))/1.0e+6,actor8_1_id,count,((1.0e+9*(throactend.tv_sec))+(throactend.tv_nsec))/1.0e+6);
+						fflush(fp4);
+						}'''
+				}
+				Transition tr8: cp cp0 -> throttleactuator {
+					cond '''recvinstanceID<10000&&recvinstanceID>0'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&airsysend);
+						//changePriority(pthread_self(),&self->constData->throttlePort.msgService->messageQueue);
+						if(CHECKTIME==5||CHECKTIME==30){
+						fprintf(fp3, "scenarionum:%d, instancenum; %d,totaltime:%f\n",recvscenarioID,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)-recvairsystemstarttime));//
+						}
+						else if(CHECKTIME==6||CHECKTIME==31){
+						//fprintf(fp3, "scenarionum:%d, instancenum; %d, airsystem:%f, pedalvotertime:%f, pedalfeeltime:%f, throttlecontrollertime:%f, airact:%f, totaltime:%f\n",recvscenarioID,recvinstanceID, recvairsystemstarttime,recvpedalvotertime,recvpedalfeeltime,recvthrottlecontrollertime,((1.0e+9*(airsysstart.tv_sec))+(airsysstart.tv_nsec))/1.0e+6,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)-recvairsystemstarttime));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_5,%f\n",recvairsystemstarttime,actor5_1_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_11,%f\n",recvpedalvotertime,actor5_2_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_12,%f\n",recvpedalfeeltime,actor5_3_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_13,%f\n",recvthrottlecontrollertime,actor5_4_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_5,%f\n",recvairsystemtime2,actor5_5_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp3, "%5.6f,scenario_5,%d,instance_%d,actor_8,%f\n",((1.0e+9*(airsysstart.tv_sec))+(airsysstart.tv_nsec))/1.0e+6,actor5_6_id,recvinstanceID,((((1.0e+9*airsysend.tv_sec)+airsysend.tv_nsec)/1.0e+6)));
+						}
+						fflush(fp3);
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass InjectionActuator {
+		Interface {
+
+			// Port veloPort: SendData
+			// conjugated Port velodata: PSendData
+			Port injectionPort: SendData
+			conjugated Port cylinerData: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec injectstart2,injectstart3,injectstart,injectend,injectend2,fuelsysstart,fuelsysend;
+				FILE *fp6;
+				FILE *fp7;'''
+			external Port injectionPort
+			external Port cylinerData
+			Attribute recvscenarioID: int32
+			Attribute recvinstanceID: int32
+			Attribute recvemer: int32
+			Attribute count: int32
+			Attribute count2: int32
+			Attribute recvfuelingsystemtime: float64
+			Attribute recvfuelingsystemtime2: float64
+			Attribute recvcylinertime: float64
+			Attribute recvairmasstime: float64
+			Attribute recvbassairtime: float64
+			Attribute recvtransientfueltime: float64
+			Attribute recvtotalfueltime: float64
+			Attribute recvinjectionactuatortime: float64
+			Attribute injectionacttime: float64
+			Attribute injectionacttime2: float64
+			Attribute injectionacttime3: float64
+			Attribute injectionstarttime: float64
+			Attribute actor6_1_id: int32
+			Attribute actor6_2_id: int32
+			Attribute actor6_3_id: int32
+			Attribute actor6_4_id: int32
+			Attribute actor6_5_id: int32
+			Attribute actor6_6_id: int32
+			Attribute actor9_1_id: int32
+			Attribute actor9_2_id: int32
+			Attribute actor9_3_id: int32
+			Attribute actor9_4_id: int32
+			Attribute actor9_5_id: int32
+			Attribute actor9_6_id: int32
+			SAP timer: PTimer
+
+			Binding InjectionTimeActuator.Injectionactordatasend and injectionactorInternalOut
+			ActorRef InjectionTimeActuator: InjectionTimingActuatorEntity
+			conjugated Port injectionactorInternalIn: SendData
+			Port injectionactorInternalOut: SendData
+			ActorRef TotalFueling: TotalFuelingEntity
+			Binding injectionactorInternalIn and TotalFueling.totalfueldata
+			Binding TotalFueling.totalfueldatasend and InjectionTimeActuator.Injectionactordata
+		}
+		Behavior {
+			StateMachine {
+				State waitingData
+
+				Transition init0: initial -> waitingData {
+					action '''
+						fp6 = fopen("fuelingsystem.txt", "a");
+						fp7 = fopen("injectionactuator.txt", "a");
+						count=1;
+						timer.startTimer(10);'''
+				}
+
+				Transition tr0: waitingData -> cp cp0 {
+					triggers {
+						<sendData: injectionPort>
+					}
+					action '''
+						if(CHECKTIME==12||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&fuelsysstart);
+						pthread_t id;
+						id=pthread_self();
+						actor6_6_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.14*MULCCS;i++){
+						}
+						recvfuelingsystemtime=data->actor_1;
+						recvfuelingsystemtime2=data->actor_5;
+						recvinstanceID=data->instanceID;
+						recvscenarioID=data->scenarioID;
+						recvemer=data->emergency;
+						recvairmasstime=data->actor_2;
+						recvbassairtime =data->actor_3;
+						recvtransientfueltime =data->actor_4;
+						actor6_1_id = data->actor_1_id;
+						actor6_2_id = data->actor_2_id;
+						actor6_3_id = data->actor_3_id;
+						actor6_4_id = data->actor_4_id;
+						actor6_5_id = data->actor_5_id;
+					'''
+				}
+				Transition tr1: waitingData -> waitingData {
+					triggers {
+						<recursive2: cylinerData>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						clock_gettime(CLOCK_MONOTONIC,&injectstart2);
+						ADASmessage.actor_5 = ((1.0e+9*(injectstart2.tv_sec))+(injectstart2.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_5_id=(int)id;
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_2=data->actor_2;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						//ADASmessage.prior=6;
+						injectionactorInternalIn.sendData(&ADASmessage);
+						
+						
+					'''
+				}
+
+				Transition tr2: waitingData -> cp cp1 {
+					triggers {
+						<sendData: injectionactorInternalOut>
+					}
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&injectstart3);
+						injectionacttime3 = ((1.0e+9*(injectstart3.tv_sec))+(injectstart3.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						actor9_6_id=(int)id;
+						injectionacttime2=data->actor_5;
+						injectionstarttime=data->actor_1;
+						recvinjectionactuatortime=data->actor_4;
+						recvcylinertime=data->actor_2;
+						recvtotalfueltime=data->actor_3;
+						count2=data->instanceID;
+						actor9_1_id = data->actor_1_id;
+						actor9_2_id = data->actor_2_id;
+						actor9_3_id = data->actor_3_id;
+						actor9_4_id = data->actor_4_id;
+						actor9_5_id = data->actor_5_id;
+					'''
+				}
+
+				Transition tr4: cp cp0 -> waitingData {
+				}
+				Transition tr5: cp cp0 -> waitingData {
+					cond '''recvemer==1'''
+				}
+				Transition tr6: cp cp0 -> waitingData {
+					cond '''recvinstanceID==10000'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&fuelsysend);
+						//changePriority(pthread_self(),&self->constData->injectionPort.msgService->messageQueue);
+						if(CHECKTIME==11||CHECKTIME==30){
+						fprintf(fp6, "scenarionum: %d, instancenum: %d, totaltime:%f\n",recvscenarioID,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)-recvfuelingsystemtime));
+						}
+						else if (CHECKTIME==12||CHECKTIME==31){
+						//fprintf(fp6, "scenarionum: %d, instancenum: %d, fuelsystem:%f, airmassflowtime:%f, bassfueltime:%f, transientfueltime:%f, injectact:%f, totaltime:%f\n",recvscenarioID,recvinstanceID, recvfuelingsystemtime,recvairmasstime,recvbassairtime,recvtransientfueltime,((1.0e+9*(fuelsysstart.tv_sec))+(fuelsysstart.tv_nsec))/1.0e+6,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)-recvfuelingsystemtime));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_6,%f\n",recvfuelingsystemtime,actor6_1_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_14,%f\n",recvairmasstime,actor6_2_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_15,%f\n",recvbassairtime,actor6_3_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_16,%f\n",recvtransientfueltime,actor6_4_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_6,%f\n",recvfuelingsystemtime2,actor6_5_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_9,%f\n",((1.0e+9*(fuelsysstart.tv_sec))+(fuelsysstart.tv_nsec))/1.0e+6,actor6_6_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						}
+						fclose(fp6);
+					'''
+				}
+				ChoicePoint cp0
+				Transition tr7: cp cp1 -> waitingData {
+				}
+				Transition tr8: cp cp1 -> waitingData {
+					cond '''count2==10000'''
+					action '''
+						if(CHECKTIME==13||CHECKTIME==30){
+						clock_gettime(CLOCK_MONOTONIC,&injectend2);
+						fprintf(fp7, "instacenum:%d, totaltime:%f\n",count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)-injectionstarttime));
+						fclose(fp7);
+						}
+						
+						else if(CHECKTIME==14||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&injectend2);
+						//fprintf(fp7, "instacenum:%d, cylinernum:%f,totalfueling:%f, injectiontimeactuatortime:%f, injectionact:%f, totaltime:%f\n",count2, recvcylinertime,recvtotalfueltime,recvinjectionactuatortime, injectionstarttime,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)-injectionstarttime));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_9,%f\n",injectionstarttime,actor9_1_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_23,%f\n",recvcylinertime,actor9_2_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_9,%f\n",injectionacttime2,actor9_5_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_17,%f\n",recvtotalfueltime,actor9_3_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_21,%f\n",recvinjectionactuatortime,actor9_4_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_9,%f\n",injectionacttime3,actor9_6_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fclose(fp7);
+						}
+					'''
+				}
+				ChoicePoint cp1
+				Transition tr3: waitingData -> waitingData {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						ADASMessage a;
+						if(CHECKTIME==13||CHECKTIME==14||CHECKTIME==30||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&injectstart);
+						a.actor_1 = ((1.0e+9*injectstart.tv_sec)+injectstart.tv_nsec)/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						a.actor_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.0003*MULCCS;i++){
+						}
+						//a.prior=6;
+						a.instanceID = count;
+						
+						cylinerData.sendData(&a);
+						count++;
+					'''
+				}
+				Transition tr9: cp cp1 -> waitingData {
+					cond '''count2<10000&&count2>0'''
+					action '''
+						if(CHECKTIME==13||CHECKTIME==30){
+						clock_gettime(CLOCK_MONOTONIC,&injectend2);
+						fprintf(fp7, "instacenum:%d, totaltime:%f\n",count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)-injectionstarttime));
+						fflush(fp7);
+						}
+						
+						else if(CHECKTIME==14||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&injectend2);
+						//fprintf(fp7, "instacenum:%d, cylinernum:%f,totalfueling:%f, injectiontimeactuatortime:%f, injectionact:%f, totaltime:%f\n",count2, recvcylinertime,recvtotalfueltime,recvinjectionactuatortime, injectionstarttime,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)-injectionstarttime));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_9,%f\n",injectionstarttime,actor9_1_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_23,%f\n",recvcylinertime,actor9_2_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_9,%f\n",injectionacttime2,actor9_5_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_17,%f\n",recvtotalfueltime,actor9_3_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_21,%f\n",recvinjectionactuatortime,actor9_4_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fprintf(fp7, "%5.6f,scenario_9,%d,instance_%d,actor_9,%f\n",injectionacttime3,actor9_6_id,count2,((((1.0e+9*injectend2.tv_sec)+injectend2.tv_nsec)/1.0e+6)));
+						fflush(fp7);
+						}
+					'''
+				}
+				Transition tr10: cp cp0 -> waitingData {
+					cond '''recvinstanceID<10000&&recvinstanceID>0'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&fuelsysend);
+						//changePriority(pthread_self(),&self->constData->injectionPort.msgService->messageQueue);
+						
+						
+						if(CHECKTIME==11||CHECKTIME==30){
+						fprintf(fp6, "scenarionum: %d, instancenum: %d, totaltime:%f\n",recvscenarioID,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)-recvfuelingsystemtime));
+						}
+						else if (CHECKTIME==12||CHECKTIME==31){
+						//fprintf(fp6, "scenarionum: %d, instancenum: %d, fuelsystem:%f, airmassflowtime:%f, bassfueltime:%f, transientfueltime:%f, injectact:%f, totaltime:%f\n",recvscenarioID,recvinstanceID, recvfuelingsystemtime,recvairmasstime,recvbassairtime,recvtransientfueltime,((1000000000.0*(fuelsysstart.tv_sec))+(fuelsysstart.tv_nsec))/1000000.0,((((1000000000.0*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1000000.0)-recvfuelingsystemtime));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_6,%f\n",recvfuelingsystemtime,actor6_1_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_14,%f\n",recvairmasstime,actor6_2_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_15,%f\n",recvbassairtime,actor6_3_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_16,%f\n",recvtransientfueltime,actor6_4_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_6,%f\n",recvfuelingsystemtime2,actor6_5_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						fprintf(fp6, "%5.6f,scenario_6,%d,instance_%d,actor_9,%f\n",((1.0e+9*(fuelsysstart.tv_sec))+(fuelsysstart.tv_nsec))/1.0e+6,actor6_6_id,recvinstanceID,((((1.0e+9*fuelsysend.tv_sec)+fuelsysend.tv_nsec)/1.0e+6)));
+						}
+						fflush(fp6);
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass InjectionTimingActuatorEntity {
+		Interface {
+			Port Injectionactordata: SendData
+			conjugated Port Injectionactordatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec injectactstart,injectactend;'''
+
+			external Port Injectionactordata
+			external Port Injectionactordatasend
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: Injectionactordata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==14||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&injectactstart);
+						ADASmessage.actor_4 = ((1.0e+9*(injectactstart.tv_sec))+(injectactstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_4_id=(int)id;
+						
+						}
+						ADASmessage.instanceID=data->instanceID;
+						ADASmessage.actor_2 = data->actor_2;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_3 = data->actor_3;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.actor_3_id = data->actor_3_id;
+						ADASmessage.actor_5 = data->actor_5;
+						ADASmessage.actor_5_id = data->actor_5_id;
+						//ADASmessage.prior=6;
+						//for(int i =0;i<ONE_Milli_SEC_CONUT*3.302*MULCCS;i++){
+						for(int i =0;i<ONE_Milli_SEC_CONUT*1.66*MULCCS;i++){
+						}
+						Injectionactordatasend.sendData(&ADASmessage);'''
+				}
+			}
+		}
+	}
+
+	ActorClass IgnitionActuator {
+		Interface {
+
+			// Port veloPort: SendData
+			// conjugated Port velodata: PSendData
+			Port ignitionPort: SendData
+			conjugated Port cylinerData: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec igniactstart,igniactstart2,igniactstart3,igniactend,igniactend2,ignisysstart,ignisysend;
+				FILE *fp9;
+				FILE *fp10;'''
+			external Port ignitionPort
+			external Port cylinerData
+			Attribute recvscenarioID: int32
+			Attribute recvinstanceID: int32
+			Attribute recvemer: int32
+			Attribute count: int16
+			Attribute count2: int16
+			Attribute recvairmasstime: float64
+			Attribute recvignitiontiming: float64
+			Attribute recvfirsttime: float64
+			Attribute recvairflowsensetime: float64
+			Attribute recvignitionsystemtime: float64
+			Attribute recvignitionsystemtime2: float64
+			Attribute recvcylinertime: float64
+			Attribute recvbassfueltime: float64
+			Attribute ignitionacttime: float64
+			Attribute ignitionacttime2: float64
+			Attribute ignitionacttime3: float64
+			Attribute ignitionstarttime: float64
+			Attribute recvignitiontimingtime: float64
+			Attribute actor7_1_id: int32
+			Attribute actor7_2_id: int32
+			Attribute actor7_3_id: int32
+			Attribute actor7_4_id: int32
+			Attribute actor7_5_id: int32
+			Attribute actor10_1_id: int32
+			Attribute actor10_2_id: int32
+			Attribute actor10_3_id: int32
+			Attribute actor10_4_id: int32
+			Attribute actor10_5_id: int32
+			Attribute actor10_6_id: int32
+			Attribute priority: int16
+			Attribute priority2: int16
+			SAP timer: PTimer
+
+			Binding IgnitionTimeActuator.ignitionactordatasend and ignitionactorInternalOut
+			ActorRef IgnitionTimeActuator: IgnitionTimingActuatorEntity
+			conjugated Port igntionactorInternalIn: SendData
+			Port ignitionactorInternalOut: SendData
+			Binding igntionactorInternalIn and IgnitionTiming.ignitiontimingdata
+			ActorRef IgnitionTiming: IgnitionTimingEntity
+			Binding IgnitionTiming.ignitiontimingdatasend and IgnitionTimeActuator.ignitionactordata
+		}
+		Behavior {
+			StateMachine {
+				State waitingData
+
+				ChoicePoint cp0
+				Transition init0: initial -> waitingData {
+					action '''
+						fp9 = fopen("ignitionsystem.txt", "a");
+						fp10 = fopen("ignitionactuator.txt", "a");
+						count=1;
+						timer.startTimer(10);'''
+				}
+
+				Transition tr1: waitingData -> cp cp0 {
+					triggers {
+						<sendData: ignitionPort>
+					}
+					action '''
+						if(CHECKTIME==16||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&ignisysstart);
+						pthread_t id;
+						id=pthread_self();
+						actor7_5_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.0075;i++){
+						}
+						recvscenarioID=data->scenarioID;
+						recvinstanceID=data->instanceID;
+						recvemer=data->emergency;
+						recvignitionsystemtime=data->actor_1;
+						recvignitionsystemtime2=data->actor_4;
+						recvairmasstime =data->actor_2;
+						recvbassfueltime=data->actor_3;
+						actor7_1_id=data->actor_1_id;
+						actor7_2_id=data->actor_2_id;
+						actor7_3_id=data->actor_3_id;
+						actor7_4_id=data->actor_4_id;
+					'''
+				}
+
+				Transition tr2: cp cp0 -> waitingData {
+				}
+				Transition tr3: cp cp0 -> waitingData {
+					cond '''recvinstanceID==10000'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&ignisysend);
+						//changePriority(pthread_self(),&self->constData->ignitionPort.msgService->messageQueue);
+						if(CHECKTIME==15||CHECKTIME==30){
+						fprintf(fp9, "scenarionum:%d, instancenum:%d, totaltime:%f\n",recvscenarioID,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)-recvignitionsystemtime));
+						}
+						else if(CHECKTIME==16||CHECKTIME==31){
+						//fprintf(fp9, "scenarionum:%d, instancenum:%d,ignitionsystem:%f, airmasstime:%f, bassfuelmass: %f, ignitionact:%f, totaltime:%f\n",recvscenarioID,recvinstanceID, recvignitionsystemtime,recvairmasstime,recvbassfueltime,((1.0e+9*(ignisysstart.tv_sec))+(ignisysstart.tv_nsec))/1.0e+6,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)-recvignitionsystemtime));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_7,%f\n",recvignitionsystemtime,actor7_1_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_18,%f\n",recvairmasstime,actor7_2_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_19,%f\n",recvbassfueltime,actor7_3_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_7,%f\n",recvignitionsystemtime2,actor7_4_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_10,%f\n",((1.0e+9*(ignisysstart.tv_sec))+(ignisysstart.tv_nsec))/1.0e+6,actor7_5_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						}
+						fclose(fp9);
+						
+					'''
+				}
+				Transition tr5: cp cp0 -> waitingData {
+					cond '''recvemer==1'''
+				}
+
+				Transition tr7: waitingData -> waitingData {
+					triggers {
+						<recursive2: cylinerData>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						clock_gettime(CLOCK_MONOTONIC,&igniactstart2);
+						ADASmessage.actor_5 = ((1.0e+9*(igniactstart2.tv_sec))+(igniactstart2.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_5_id=(int)id;
+						ADASmessage.instanceID = data->instanceID;
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_2=data->actor_2;
+						//ADASmessage.prior=7;
+						igntionactorInternalIn.sendData(&ADASmessage);
+					'''
+				}
+				ChoicePoint cp1
+				Transition tr8: waitingData -> cp cp1 {
+					triggers {
+						<sendData: ignitionactorInternalOut>
+					}
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&igniactstart3);
+						ignitionacttime3 = ((1.0e+9*(igniactstart3.tv_sec))+(igniactstart3.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						actor10_6_id=(int)id;
+						ignitionstarttime=data->actor_1;
+						recvcylinertime=data->actor_2;
+						recvignitiontiming=data->actor_3;
+						recvignitiontimingtime=data->actor_4;
+						ignitionacttime2 =data->actor_5;
+						actor10_1_id = data->actor_1_id;
+						actor10_2_id = data->actor_2_id;
+						actor10_3_id = data->actor_3_id;
+						actor10_4_id = data->actor_4_id;
+						actor10_5_id = data->actor_5_id;
+						count2=data->instanceID;
+						//struct sched_param param;
+						//int sched_policy;
+						//pthread_getschedparam(pthread_self(),&sched_policy,&param);
+						//priority = param.__sched_priority;
+					'''
+				}
+				Transition tr0: cp cp1 -> waitingData {
+				}
+				Transition tr9: cp cp1 -> waitingData {
+					cond '''count2==10000'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&igniactend2);
+						if(CHECKTIME==17||CHECKTIME==30){
+						fprintf(fp10, "instancenum:%d, totaltime:%f\n",count2, ((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)-ignitionstarttime));
+						
+						}
+						else if(CHECKTIME==18||CHECKTIME==31){
+						//fprintf(fp10, "instancenum:%d, cylinernum:%f, ignitiontiming:%f, ignitionacttiming:%f, ignitionact:%f, totaltime:%f\n",count2, recvcylinertime,recvignitiontiming,recvignitiontimingtime, ignitionstarttime,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)-ignitionstarttime));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_10,%f\n",ignitionstarttime,actor10_1_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_23,%f\n",recvcylinertime,actor10_2_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_10,%f\n",ignitionacttime2,actor10_5_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_20,%f\n",recvignitiontiming,actor10_3_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_22,%f\n",recvignitiontimingtime,actor10_4_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_10,%f\n",ignitionacttime3,actor10_6_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						}
+						fclose(fp10);
+					'''
+				}
+				Transition tr4: waitingData -> waitingData {
+					triggers {
+						<timeout: timer>
+					}
+					action '''
+						ADASMessage a;
+						if(CHECKTIME==17||CHECKTIME==18||CHECKTIME==30||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&igniactstart);
+						a.actor_1 = ((1.0e+9*igniactstart.tv_sec)+igniactstart.tv_nsec)/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						a.actor_1_id=(int)id;
+						}
+						for(int i =0;i<ONE_Milli_SEC_CONUT*0.0004*MULCCS;i++){
+						}
+						//a.prior=7;
+						a.instanceID = count++;
+						cylinerData.sendData(&a);
+					'''
+				}
+				Transition tr6: cp cp1 -> waitingData {
+					cond '''count2<10000&&count2>0'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&igniactend2);
+						if(CHECKTIME==17||CHECKTIME==30){
+						fprintf(fp10, "instancenum:%d, totaltime:%f\n",count2, ((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)-ignitionstarttime));
+						}
+						else if(CHECKTIME==18||CHECKTIME==31){
+						//fprintf(fp10, "instancenum:%d, cylinernum:%f, ignitiontiming:%f, ignitionacttiming:%f, ignitionact:%f, totaltime:%f\n",count2, recvcylinertime,recvignitiontiming,recvignitiontimingtime, ignitionstarttime,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)-ignitionstarttime));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_10,%f\n",ignitionstarttime,actor10_1_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_23,%f\n",recvcylinertime,actor10_2_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_10,%f\n",ignitionacttime2,actor10_5_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_20,%f\n",recvignitiontiming,actor10_3_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_22,%f\n",recvignitiontimingtime,actor10_4_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_10,%f\n",ignitionacttime3,actor10_6_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)));
+						//fprintf(fp10, "%5.6f,scenario_10,%d,instance_%d,actor_22,%f\n",recvignitiontimingtime,actor10_4_id,count2,((((1.0e+9*igniactend2.tv_sec)+igniactend2.tv_nsec)/1.0e+6)-ignitionstarttime));
+						}
+						fflush(fp10);
+					'''
+				}
+				Transition tr10: cp cp0 -> waitingData {
+					cond '''recvinstanceID<10000&&recvinstanceID>0'''
+					action '''
+						clock_gettime(CLOCK_MONOTONIC,&ignisysend);
+						//changePriority(pthread_self(),&self->constData->ignitionPort.msgService->messageQueue);
+						
+						if(CHECKTIME==15||CHECKTIME==30){
+						fprintf(fp9, "scenarionum:%d, instancenum:%d, totaltime:%f\n",recvscenarioID,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)-recvignitionsystemtime));
+						}
+						else if(CHECKTIME==16||CHECKTIME==31){
+						//fprintf(fp9, "scenarionum:%d, instancenum:%d,ignitionsystem:%f, airmasstime:%f, bassfuelmass: %f, ignitionact:%f, totaltime:%f\n",recvscenarioID,recvinstanceID, recvignitionsystemtime,recvairmasstime,recvbassfueltime,((1.0e+9*(ignisysstart.tv_sec))+(ignisysstart.tv_nsec))/1.0e+6,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)-recvignitionsystemtime));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_7,%f\n",recvignitionsystemtime,actor7_1_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_18,%f\n",recvairmasstime,actor7_2_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_19,%f\n",recvbassfueltime,actor7_3_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_7,%f\n",recvignitionsystemtime2,actor7_4_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						fprintf(fp9, "%5.6f,scenario_7,%d,instance_%d,actor_10,%f\n",((1.0e+9*(ignisysstart.tv_sec))+(ignisysstart.tv_nsec))/1.0e+6,actor7_5_id,recvinstanceID,((((1.0e+9*ignisysend.tv_sec)+ignisysend.tv_nsec)/1.0e+6)));
+						}
+						fflush(fp9);
+					'''
+				}
+			}
+		}
+	}
+
+	ActorClass IgnitionTimingActuatorEntity {
+		Interface {
+			Port ignitionactordata: SendData
+			conjugated Port ignitionactordatasend: SendData
+		}
+		Structure {
+			usercode1 '''
+				#include <stdlib.h>
+				#include <string.h>
+				#include <time.h>
+				#include <ctype.h>
+				struct timespec ignitimingstart,ignitimingend;'''
+
+			external Port ignitionactordata
+			external Port ignitionactordatasend
+		}
+		Behavior {
+			StateMachine {
+				State waitingData {
+				}
+				Transition init0: initial -> waitingData
+				Transition tr0: waitingData -> waitingData {
+					triggers {
+						<sendData: ignitionactordata>
+					}
+					action '''
+						ADASMessage ADASmessage;
+						if(CHECKTIME==18||CHECKTIME==31){
+						clock_gettime(CLOCK_MONOTONIC,&ignitimingstart);
+						ADASmessage.actor_4 = ((1.0e+9*(ignitimingstart.tv_sec))+(ignitimingstart.tv_nsec))/1.0e+6;
+						pthread_t id;
+						id=pthread_self();
+						ADASmessage.actor_4_id=(int)id;
+						}
+						ADASmessage.actor_1_id = data->actor_1_id;
+						ADASmessage.actor_2_id = data->actor_2_id;
+						ADASmessage.actor_3_id = data->actor_3_id;
+						ADASmessage.instanceID=data->instanceID;
+						ADASmessage.actor_2 = data->actor_2;
+						ADASmessage.actor_1 = data->actor_1;
+						ADASmessage.actor_3 = data->actor_3;
+						ADASmessage.actor_5 = data->actor_5;
+						ADASmessage.actor_5_id = data->actor_5_id;
+						//ADASmessage.prior=6;
+						//for(int i =0;i<ONE_Milli_SEC_CONUT*4.921*MULCCS;i++){
+						for(int i =0;i<ONE_Milli_SEC_CONUT*2.46*MULCCS;i++){
+						}
+						ignitionactordatasend.sendData(&ADASmessage);
+					'''
+				}
+			}
+		}
+	}
+
+	ProtocolClass SendData {
+		incoming {
+			Message sendData(data: ADASMessage)
+			Message sendchangestate()
+		}
+		outgoing {
+			Message recursive2(data: ADASMessage)
+			Message recvchangestate()
+		}
+	}
+
+	DataClass ADASMessage {
+		Attribute scenarioID: int8
+		Attribute instanceID: int32
+		Attribute actor_1: float64
+		Attribute actor_2: float64
+		Attribute actor_3: float64
+		Attribute actor_4: float64
+		Attribute actor_5: float64
+		Attribute actor_6: float64
+		Attribute actor_1_id: int32
+		Attribute actor_2_id: int32
+		Attribute actor_3_id: int32
+		Attribute actor_4_id: int32
+		Attribute actor_5_id: int32
+		Attribute actor_6_id: int32
+		Attribute emergency: int8
+		Attribute prior: int8
+		Attribute staticcheck: int8
+	}
+}
