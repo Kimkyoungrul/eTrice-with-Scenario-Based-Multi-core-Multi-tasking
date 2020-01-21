@@ -1,0 +1,11 @@
+RoomModel toyexample {
+	LogicalSystem toyexample {
+		SubSystemRef main: MainSubSystem
+	}
+	SubSystemClass MainSubSystem {
+		ActorRef appl: Application
+		LogicalThread defaultThread
+	}
+	ActorClass Application {
+	}
+}

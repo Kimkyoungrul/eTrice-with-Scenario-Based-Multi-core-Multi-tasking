@@ -1,0 +1,210 @@
+PhysicalModel TemplatePhysical {
+	
+	PhysicalSystem TemplatePhysicalSystem {
+		NodeRef node : DefaultNodeClass
+	}
+	
+	NodeClass DefaultNodeClass {
+		runtime = DefaultRuntimeClass
+		priomin = -10
+		priomax = 99
+		DefaultThread DefaultPhysicalThread {
+			execmode = mixed
+			interval = 5ms
+			prio = 98
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		
+		Thread BlockedThread {
+			execmode = blocked
+			prio = 0 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		
+		Thread PolledThread {
+			execmode = polled
+			interval = 5ms
+			prio = 0 
+			stacksize = 1024
+			msgblocksize = 200	
+			msgpoolsize = 200
+		}
+		Thread PedalThread {
+			execmode = blocked
+			prio = 95 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		Thread ThrottleThread {
+			execmode = blocked
+			prio = 96 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		Thread AirflowThread {
+			execmode = blocked
+			prio = 97 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+//		Thread TimerThread {
+//			execmode = blocked
+//			prio = 0 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread CylinerThread {
+//			execmode = blocked
+//			prio = 0 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+		Thread AirsysThread {
+			execmode = blocked
+			prio = 89 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		Thread FuelingsysThread {
+			execmode = blocked
+			prio = 90 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		Thread IgnitionsysThread {
+			execmode = blocked
+			prio = 91
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		Thread ThrottleactThread {
+			execmode = blocked
+			prio = 92 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		Thread InjectactThread {
+			execmode = blocked
+			prio = 93 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+		Thread IgniactThread {
+			execmode = blocked
+			prio = 94
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+//		Thread PedalvoterThread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread PedalfeelThread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread ThrottlecontrolThread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread Airmassflow1Thread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread Bassfuelmass1Thread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread TransfuelThread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread TotalfuelThread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread Airmassflow2Thread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread Bassfuelmass2Thread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread IgnitionTimingThread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread IgnitionactentityThread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+//		Thread InjectionactentityThread {
+//			execmode = blocked
+//			prio = 2 
+//			stacksize = 1024
+//			msgblocksize = 200
+//			msgpoolsize = 200
+//		}
+		Thread PedaldiagThread {
+			execmode = blocked
+			prio = 1 
+			stacksize = 1024
+			msgblocksize = 200
+			msgpoolsize = 200
+		}
+	}
+
+	RuntimeClass DefaultRuntimeClass {
+		model = multiThreaded
+	} 
+	
+}

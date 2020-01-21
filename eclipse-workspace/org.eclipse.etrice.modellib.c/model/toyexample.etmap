@@ -1,0 +1,9 @@
+MappingModel toyexample {
+	import toyexample.* from "toyexample.room"
+	import toyexample.* from "toyexample.etphys"
+	Mapping toyexample -> PhysSys1 {
+		SubSystemMapping main -> nodeRef1 {
+			ThreadMapping defaultThread -> PhysicalThread1
+		}
+	}
+}
