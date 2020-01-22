@@ -20,7 +20,7 @@ Python : 3.5
 #### 1. Do you want to change the time constraints of each actor?
 As shown in the figure below, you can modify the time consuming code of each actor behavior diagram.    
 The unit of time used in this model is ms.     
-<img src="/img/Timemodify.JPG" width="450px" height="300px"></img><br/>    
+<img src="/img/Timemodify.JPG" width="900px" height="300px"></img><br/>    
     
 #### 2. Multiplication of time constraints
 Path : eclipse-workspace/org.eclipse.etrice.runtime.c/src/common/debugging/etMSCLogger.h      
