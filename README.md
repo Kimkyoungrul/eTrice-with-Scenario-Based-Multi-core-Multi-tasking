@@ -28,7 +28,7 @@ Path : eclipse-workspace/org.eclipse.etrice.runtime.c/src/common/debugging/etMSC
 Line 26     
     
 <pre><code>
-#define MULCCS 0.75 //It is now performing at three-quarters of the basic constraints. You can modify it to the level you want.
+#define MULCCS 0.75 // Now, It is performing at three-quarters of the basic constraints. You can modify it to the level you want.
 </code></pre>    
     
 ***
