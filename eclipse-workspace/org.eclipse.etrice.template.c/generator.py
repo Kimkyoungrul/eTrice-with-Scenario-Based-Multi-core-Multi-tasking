@@ -4,18 +4,9 @@ import re
 import argparse
 import shutil
 
-def enrollArgs():#argumment parser
-    parser=argparse.ArgumentParser(description="Enter Function:"
-                                               "copyfile Filename"
-                                               "coregen, ThreadName1, CoreNum2, ThreadName2, CoreNum2, ..."
-                                               "msQpriormessage, Filename, ActorName1, Priority1, ActorName2, Priority2, ...")
-    parser.add_argument("X",type=str,nargs='+')
-    args=parser.parse_args()
-    argsList=args.X
-    return argsList
 def defaultset():
     senddatasetting()
-def coreinitialize():#Threea core initialize
+def coreinitialize():#Thread core initialize
     with open("./src-gen/TemplateModel/node_subSystemRef.c","r") as f1:
         #reg=re.compile(complietext)
         data=f1.read()
@@ -182,8 +173,7 @@ def actGenerator():
                                        actortext)
             with open("./src-gen/TemplateModel/" + actorname + ".c", "w") as f1:
                 f1.write(actortext)
-def msqueuePriority():
-    pass
+
 def senddatasetting():
     with open("../default/SendData.c","r") as f1:
         data=f1.read()
@@ -230,6 +220,5 @@ if __name__=="__main__":
     coreGenerator()
     instinitialize()
     instGenerator()
-    #msqueuePriority()
     node_subSystemRef_Disp_setting()
     actGenerator()
