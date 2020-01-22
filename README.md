@@ -22,7 +22,7 @@ As shown in the figure below, you can modify the time consuming code of each act
 The unit of time used in this model is ms.     
 <img src="/img/Timemodify.JPG" width="900px" height="300px"></img><br/>    
     
-    ***
+***
 #### 2. Multiplication of time constraints
 Path : eclipse-workspace/org.eclipse.etrice.runtime.c/src/common/debugging/etMSCLogger.h      
 Line 26     
@@ -31,7 +31,7 @@ Line 26
 #define MULCCS 0.75 //It is now performing at three-quarters of the basic constraints. You can modify it to the level you want.
 </code></pre>    
     
-    ***
+***
 #### 3. Timetracing.txt
 This project performs a time tracing for all scenarios.    
 when you run this project then it make 11 txt files.    
