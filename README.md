@@ -13,8 +13,8 @@ This project provides reconfigured eTrice runtime system and code modification t
     
 OS : Linux   
 eclipse version : oxygen   
-eTrice version : 1.1.3  
-eTrice language : C
+eTrice version : 1.1.3    
+eTrice language : C    
 Python : 3.5   
    
 ### How to use and modify    
