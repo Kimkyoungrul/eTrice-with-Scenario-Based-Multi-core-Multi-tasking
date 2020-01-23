@@ -20,7 +20,8 @@ Python : 3.5
 ### How to use and modify    
 #### 1. use and code modify
      
-<img src="/img/eTriceSystem.JPG" width="500px" height="500px"></img><br/>    
+<img src="/img/eTriceSystem.JPG" width="500px" height="400px"></img><br/>    
+<eTrice System with Scenario Based Multi-core Multi-tasking>    
 If you run "generate_Template.launch" of eTrice. then eTrice will make many code files.    
 Code modification tool is program that modifies multiple code files created by eTrice.    
     
