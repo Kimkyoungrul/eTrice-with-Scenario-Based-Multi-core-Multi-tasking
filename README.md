@@ -18,10 +18,10 @@ eTrice language : C
 Python : 3.5   
    
 ### How to use and modify    
-#### 1.use and code modify
+#### 1. use and code modify
      
 If you run "generate_Template.launch" of eTrice. then eTrice will make many code files.    
-Code modification tool is program that modifies multiple files created by eTrice.    
+Code modification tool is program that modifies multiple code files created by eTrice.    
     
 So, if you want use scenario based multi-core multi-tasking. You have to follow this step.    
 1. Run "generate_Template.launch" of eTrice.    
