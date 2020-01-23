@@ -63,3 +63,4 @@ Code modification tool is program that modifies multiple files created by eTrice
 So, if you want use scenario based multi-core multi-tasking. You have to follow this step.
 1. Run "generate_Template.launch" of eTrice.
 2. Run "generator.py" --> path : eclipse-workspace/org.eclipse.etrice.template.c/generator.py
+<img src="/img/generatorimage.JPG" width="900px" height="1500px"></img><br/>    
