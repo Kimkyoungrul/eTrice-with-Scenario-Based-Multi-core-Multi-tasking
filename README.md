@@ -32,7 +32,7 @@ Line 26
 </code></pre>    
     
 ***
-#### 3. Timetracing.txt
+#### 3. Timetracing
 This project performs a time tracing for all scenarios.    
 when you run this project then it make 11 txt files.    
      
@@ -55,3 +55,11 @@ Path : eclipse-workspace/timetrace.py
 You just run this file. then you will get worst-case response time of each scenario    
     
 ***
+#### 4.Code Modification Tool
+    
+If you run "generate_Template.launch" of eTrice. then eTrice will make many code files.
+Code modification tool is program that modifies multiple files created by eTrice.
+    
+So, if you want use scenario based multi-core multi-tasking. You have to follow this step.
+1. Run "generate_Template.launch" of eTrice.
+2. Run "generator.py" --> path : eclipse-workspace/org.eclipse.etrice.template.c/generator.py
