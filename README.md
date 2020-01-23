@@ -30,7 +30,7 @@ So, if you want use scenario based multi-core multi-tasking. You have to follow 
 3. Complete code modify     
 4. Run "run_Template_Lnux.launch" (eTrice make "eclipse-workspace/org.eclipse.etrice.template.c/LinuxPosix/org.eclipse.etrice.template.c.exe")    
 5. Run the exe file("eclipse-workspace/org.eclipse.etrice.template.c/LinuxPosix/org.eclipse.etrice.template.c.exe") in root mode. because the pthread library is available in root mode.    
-6.If you want to make sure it's working properly, check the Time-tracing text file that is created when you run it. If time tracking information is written in a text file, it is working properly. (Time tracing text file path : eclipse-workspace/org.eclipse.etrice.template.c/LinuxPosix)        
+6. If you want to make sure it's working properly, check the time-tracing text file that is created when you run it. If time tracing information is written in a text file, it is working properly. (Time tracing text file path : eclipse-workspace/org.eclipse.etrice.template.c/LinuxPosix)        
      
 ***
 #### 2. Timetracing
