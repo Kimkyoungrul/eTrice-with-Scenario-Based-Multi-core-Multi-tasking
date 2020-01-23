@@ -59,7 +59,7 @@ You just run this file. then you will get worst-case response time of each scena
 ***
 #### 3. Do you want to change the time constraints of each actor?
 As shown in the figure below, you can modify the time consuming code of each actor behavior diagram.    
-If you double click transition name, you can see "Edit transition"
+If you double click transition name, you can see "Edit transition"    
 The unit of time used in this model is ms.     
 <img src="/img/Timemodify.JPG" width="900px" height="300px"></img><br/>    
     
