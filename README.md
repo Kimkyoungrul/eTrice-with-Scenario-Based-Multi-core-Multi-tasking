@@ -58,7 +58,7 @@ externalQ.txt --> All Scenario (Start time)
 However, calculating response times through these text files is repetitive and difficult.    
 Therefore, I provide Python file that are easy to do.    
     
-Path : eclipse-workspace/timetrace.py    
+Path : eclipse-workspace/org.eclipse.etrice.template.c/timetrace.py    
     
 You just run this file. then you will get worst-case response time of each scenario    
     
