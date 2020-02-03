@@ -86,8 +86,8 @@ def coreGenerator():#Thread core generator
             else:
                 print(" {}.{}".format(num, threadname))
         print()
-        corenumlist=input("input Corenum (공백기준):").split()
-        prioritylist = input("input priority (공백기준):").split()
+        corenumlist=input("input Corenum (space criteria):").split()
+        prioritylist = input("input priority (space criteria):").split()
         for i in range(0, len(corenumlist)):
             if threadlist[i]=="DefaultPhysicalThread":
                 data = re.sub(r"(?P<a>msgBuffer)_(?P<b>" + threadlist[
@@ -114,7 +114,7 @@ def instGenerator():#Thread core generator
         print("Timer List:")
         for num,timername in enumerate(timerlist):    print(" {}.{}".format(num+1,timername))
         print()
-        gtimerlist=input("input timer number(공백기준):").split()
+        gtimerlist=input("input timer number(space criteria):").split()
         for i in range(0, len(gtimerlist)):
             data = re.sub(r"(_LogSys_subSystemRef)_(\w+)_("+timerlist[int(gtimerlist[i])-1]+")_(timer_var={\s{2}\d),(\s{2})(\d)",
                           r"\1_\2_\3_\4,\n\t" + "1", data)
@@ -133,7 +133,7 @@ def actGenerator():
         actorlist.sort()
         print("Actor List:")
         for num, actname in enumerate(actorlist):    print(" {}.{}".format(num + 1, actname))
-        gactorlist = input("input global actor num(공백기준):").split()
+        gactorlist = input("input global actor num(space criteria):").split()
         portlist = []
         for actor in gactorlist:
             reg = re.compile(
