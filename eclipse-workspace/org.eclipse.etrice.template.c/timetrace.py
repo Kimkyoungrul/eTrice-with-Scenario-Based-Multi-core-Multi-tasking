@@ -1,5 +1,5 @@
 def ScenarioEndTime(filename,actor):
-    with open("./org.eclipse.etrice.template.c/LinuxPosix/"+filename+".txt", "r") as f1:
+    with open("./LinuxPosix/"+filename+".txt", "r") as f1:
         data = f1.read()
         line = data.split()
         EndListLine = []
@@ -13,7 +13,7 @@ def ScenarioEndTime(filename,actor):
         return EndListLine,threadnum
 
 def ScenarioStartTime(threadnum):
-    with open("./org.eclipse.etrice.template.c/LinuxPosix/externalQ.txt", "r") as f1:
+    with open("./LinuxPosix/externalQ.txt", "r") as f1:
         startData = f1.read()
         startLine = startData.split()
         StartTimeList=[]
