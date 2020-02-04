@@ -26,7 +26,6 @@ def coreinitialize():#Thread core initialize
         data = re.sub(r"(etMessageService_start_kkr)", "etMessageService_start", data)
         reg = re.compile("(etMessageService_start[(][&]msgService_)(\w+)")
         threadlist = [row[1] for row in reg.findall(data)]
-        print(threadlist)
         for i in threadlist:
             if i != "DefaultPhysicalThread":
                 data = re.sub(r"(etMessageService_start)(?P<a>[(][&]msgService)_(?P<b>" + str(i) + ")",
@@ -86,8 +85,8 @@ def coreGenerator():#Thread core generator
             else:
                 print(" {}.{}".format(num, threadname))
         print()
-        corenumlist=input("input Corenum (space criteria):").split()
-        prioritylist = input("input priority (space criteria):").split()
+        corenumlist=input("map each thread to Core no. (core starts from 1)(ex: 1 2, which maps two threads to different core):").split()
+        prioritylist = input("assign priority no.to each thread (99 to 0 where 0 is the lowest priority)(ex: 99 91 for two thread):").split()
         for i in range(0, len(corenumlist)):
             if threadlist[i]=="DefaultPhysicalThread":
                 data = re.sub(r"(?P<a>msgBuffer)_(?P<b>" + threadlist[
@@ -111,10 +110,10 @@ def instGenerator():#Thread core generator
         reg = re.compile("(_LogSys_subSystemRef)_(\w+)_(\w+)_(timer_var={\s{2}\d,\s{2})(\d)")
         timerlist = [row[2] for row in reg.findall(data)]
         timerlist.sort()
-        print("Timer List:")
+        print("TimedActor List:")
         for num,timername in enumerate(timerlist):    print(" {}.{}".format(num+1,timername))
         print()
-        gtimerlist=input("input timer number(space criteria):").split()
+        gtimerlist=input("enumerate timedactors that use global resources, which means their accesing thread are not mapped to a single core:").split()
         for i in range(0, len(gtimerlist)):
             data = re.sub(r"(_LogSys_subSystemRef)_(\w+)_("+timerlist[int(gtimerlist[i])-1]+")_(timer_var={\s{2}\d),(\s{2})(\d)",
                           r"\1_\2_\3_\4,\n\t" + "1", data)
@@ -131,9 +130,9 @@ def actGenerator():
         actorlist.remove('MsgDispatcher_AllThread')
         actorlist.remove('ATimingService')
         actorlist.sort()
-        print("Actor List:")
+        print("Total Actor List:")
         for num, actname in enumerate(actorlist):    print(" {}.{}".format(num + 1, actname))
-        gactorlist = input("input global actor num(space criteria):").split()
+        gactorlist = input("enumerate any actors that use global resources, which means their accesing thread are not mapped to a single core::").split()
         portlist = []
         for actor in gactorlist:
             reg = re.compile(
