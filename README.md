@@ -16,8 +16,8 @@ eclipse version : oxygen
 eTrice version : 1.1.3    
 eTrice language : C    
 Python : 3.6    
-gcc : 5.5.0
-g++ : 5.5.0
+gcc : 5.5.0    
+g++ : 5.5.0    
 java : java8    
 
 ### How to use and modify    
