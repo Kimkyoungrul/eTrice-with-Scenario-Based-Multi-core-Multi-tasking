@@ -16,18 +16,18 @@ eclipse version : oxygen
 eTrice version : 1.1.3    
 eTrice language : C    
 Python : 3.6    
-gcc : 5.5.0    
-g++ : 5.5.0    
+gcc : 5.5.0
+g++ : 5.5.0
 java : java8    
 
-### How to use and modify    
-#### 1. use and code modify
+### How to configure and use tools    
+#### 1. Generating code and executable
      
 <img src="/img/eTriceSystem.JPG" width="500px" height="400px"></img><br/>    
 (eTrice System with Scenario Based Multi-core Multi-tasking)    
     
-If you run "generate_Template.launch" of eTrice. then eTrice will make many code files.    
-Code modification tool is program that modifies multiple code files created by eTrice.    
+If you run "generate_Template.launch" of eTrice, then eTrice will generate source code.    
+Code modification tool is a program that modifies multiple code files created by eTrice.    
     
 So, if you want use scenario based multi-core multi-tasking. You have to follow this step.    
 1. Run "generate_Template.launch" of eTrice.    
@@ -63,14 +63,14 @@ Path : eclipse-workspace/org.eclipse.etrice.template.c/timetrace.py
 You just run this file. then you will get worst-case response time of each scenario    
     
 ***
-#### 3. Do you want to change the time constraints of each actor?
+#### 3. Configuration of the timing constraints of each actor
 As shown in the figure below, you can modify the time consuming code of each actor behavior diagram.    
 If you double click transition name, you can see "Edit transition"    
 The unit of time used in this model is ms.     
 <img src="/img/Timemodify.JPG" width="900px" height="300px"></img><br/>    
     
 ***
-#### 4. Multiplication of time constraints
+#### 4. Configuration of time scaling factor
 Path : eclipse-workspace/org.eclipse.etrice.runtime.c/src/common/debugging/etMSCLogger.h      
 Line 26     
     
