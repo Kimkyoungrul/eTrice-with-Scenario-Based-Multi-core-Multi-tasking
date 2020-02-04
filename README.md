@@ -48,28 +48,28 @@ Thread List :
  9.ThrottleThread
  10.ThrottleactThread
 
-2.3 map each thread to Core no. (core no. starts from 1) (ex: 1 2, which maps two threads to diffent core):
-    (ex) 4 3 1 2 4 2 1 3 2 4
+2.3 map each thread to Core no. (core no. starts from 1) (ex: 1 2, which maps two threads to diffent core):     
+    (ex) 4 3 1 2 4 2 1 3 2 4     
 
-2.4 assign piroirty no. to each thread (99 to 0 where 0 is the lowest priority) (ex: 99 91 for two threads):
-    (ex) 99 91 92 96 94 95 97 90 98 93
-
+2.4 assign piroirty no. to each thread (99 to 0 where 0 is the lowest priority) (ex: 99 91 for two threads):     
+    (ex) 99 91 92 96 94 95 97 90 98 93      
+       
 2.5 Then, CodeModifer.py will show the list of actors which invokes timer.startTimer(), which we call "timedActor". 
-TimedActor List:
- 1.AccelPedalSensor
- 2.AirSystem
- 3.CylinerNumObserver
- 4.FuelingSystem
- 5.IgnitionActuator
- 6.IgnitionSystem
- 7.InjectionActuator
- 8.MassAirFlowSensor
- 9.PadelDiag
- 10.ThrottleActuator
- 11.ThrottleSensor
+TimedActor List:    
+ 1.AccelPedalSensor    
+ 2.AirSystem    
+ 3.CylinerNumObserver    
+ 4.FuelingSystem    
+ 5.IgnitionActuator    
+ 6.IgnitionSystem    
+ 7.InjectionActuator    
+ 8.MassAirFlowSensor    
+ 9.PadelDiag    
+ 10.ThrottleActuator    
+ 11.ThrottleSensor    
 
-2.6 enumerate timedActors that use global resources, which means their accesing threads are not mapped to a single core: 
-   (ex) 2 4 5 6 10
+2.6 enumerate timedActors that use global resources, which means their accesing threads are not mapped to a single core:     
+   (ex) 2 4 5 6 10    
 
 2.7 Then, CodeModifer.py will show the list of total actors.
 Actor List:
@@ -81,11 +81,11 @@ Actor List:
  6.BassFuelMassEntity
  7.BassFuelMassEntity2
  8.CylinerNumObserver
- 9.FuelingSystem
- 10.IgnitionActuator
- 11.IgnitionSystem
- 12.IgnitionTimingActuatorEntity
- 13.IgnitionTimingEntity
+ 9.FuelingSystem    
+ 10.IgnitionActuator    
+ 11.IgnitionSystem    
+ 12.IgnitionTimingActuatorEntity    
+ 13.IgnitionTimingEntity    
  14.InjectionActuator
  15.InjectionTimingActuatorEntity
  16.MassAirFlowSensor
